@@ -41,12 +41,20 @@ public class WatheLangGen extends FabricLanguageProvider {
         builder.add("lobby.autostart.active", "Game will start once %s+ players are boarded");
         builder.add("lobby.autostart.time", "Game starting in %ss");
         builder.add("lobby.autostart.starting", "Game starting");
+        builder.add("lobby.autostart.gamemode", "Current Mode: %s");
+        builder.add("lobby.voting.active", "Map voting in progress");
+        builder.add("lobby.voting.keybind_hint", "Press [%s] to open/close the voting screen");
 
-        builder.add("announcement.role.civilian", "Civilian!");
-        builder.add("announcement.role.vigilante", "Vigilante!");
-        builder.add("announcement.role.veteran", "Veteran!");
-        builder.add("announcement.role.killer", "Killer!");
-        builder.add("announcement.role.loose_end", "Loose End!");
+        // Game modes
+        builder.add("gamemode.wathe.murder", "Murder Mode");
+        builder.add("gamemode.wathe.discovery", "Discovery Mode");
+        builder.add("gamemode.wathe.loose_ends", "Loose Ends Mode");
+
+        builder.add("announcement.role.civilian", "Civilian");
+        builder.add("announcement.role.vigilante", "Vigilante");
+        builder.add("announcement.role.veteran", "Veteran");
+        builder.add("announcement.role.killer", "Killer");
+        builder.add("announcement.role.loose_end", "Loose End");
         builder.add("announcement.title.civilian", "Civilians");
         builder.add("announcement.title.vigilante", "Vigilantes");
         builder.add("announcement.title.veteran", "Veterans");
@@ -55,16 +63,16 @@ public class WatheLangGen extends FabricLanguageProvider {
         builder.add("announcement.title.discovery_civilian", "Discovery Civilians");
         builder.add("announcement.title.no_role", "No Role");
 
-        builder.add("announcement.welcome", "Welcome aboard %s");
-        builder.add("announcement.premise", "There is a killer aboard the train.");
-        builder.add("announcement.premises", "There are %s killers aboard the train.");
-        builder.add("announcement.goal.civilian", "Stay safe and survive till the end of the ride.");
+        builder.add("announcement.welcome", "Welcome aboard, %s!");
+        builder.add("announcement.premise", "There is a killer hiding on the train.");
+        builder.add("announcement.premises", "There are %s killers hiding on the train.");
+        builder.add("announcement.goal.civilian", "Stay safe and survive until the end of the journey.");
         builder.add("announcement.goal.vigilante", "Eliminate any murderers and protect the civilians.");
-        builder.add("announcement.goal.veteran", "Use your combat experience to eliminate any threats. You have limited strikes.");
+        builder.add("announcement.goal.veteran", "Use your combat experience to eliminate any threats. Your knife has limited uses.");
         builder.add("announcement.goal.killer", "Eliminate a passenger to succeed, before time runs out.");
-        builder.add("announcement.goals.civilian", "Stay safe and survive till the end of the ride.");
+        builder.add("announcement.goals.civilian", "Stay safe and survive until the end of the journey.");
         builder.add("announcement.goals.vigilante", "Eliminate any murderers and protect the civilians.");
-        builder.add("announcement.goals.veteran", "Use your combat experience to eliminate any threats. You have limited strikes.");
+        builder.add("announcement.goals.veteran", "Use your combat experience to eliminate any threats. Your knife has limited uses.");
         builder.add("announcement.goals.killer", "Eliminate all civilians before time runs out.");
         builder.add("announcement.win.civilian", "Passengers Win!");
         builder.add("announcement.win.vigilante", "Passengers Win!");
@@ -73,7 +81,7 @@ public class WatheLangGen extends FabricLanguageProvider {
         builder.add("announcement.win.loose_end", "%s Wins!");
         builder.add("announcement.loose_ends.welcome", "Welcome aboard... Loose End.");
         builder.add("announcement.loose_ends.premise", "Everybody on the train has a derringer and a knife.");
-        builder.add("announcement.loose_ends.goal", "Tie all loose ends before they tie you. Good luck.");
+        builder.add("announcement.loose_ends.goal", "Eliminate all loose ends before they come for you. Good luck.");
         builder.add("announcement.loose_ends.winner", "%s Wins!");
 
         builder.add("tip.letter.name", "Dear %s, your role is %s. Welcome aboard the Harpy Express!");
@@ -132,7 +140,8 @@ public class WatheLangGen extends FabricLanguageProvider {
         builder.add("game.win.loose_end", "They tied all of their loose ends!");
 
         builder.add("key.wathe.instinct", "Instinct");
-        builder.add("category.wathe.keybinds", "Wathe");
+        builder.add("key.wathe.map_vote", "Map Vote");
+        builder.add("category.wathe.keybinds", "Spark Murder Mystery");
 
         builder.add("task.feel", "You feel like ");
         builder.add("task.fake", "You could fake ");
@@ -141,13 +150,14 @@ public class WatheLangGen extends FabricLanguageProvider {
         builder.add("task.drink", "getting a drink.");
         builder.add("task.eat", "getting a snack.");
         builder.add("game.player.stung", "You feel something stinging you in your sleep.");
-        builder.add("game.blackout.countdown", "§c⚡ Someone sabotaged the power system!§r Restoring power: %ss");
-        builder.add("game.psycho_mode.time", "Psycho Mode: %s");
+        builder.add("game.blackout.countdown", "§c⚡ Someone has sabotaged the train's power supply!§r Automatic power restoration in %s seconds!");
+        builder.add("game.psycho_mode.time", "Psycho Mode: %ss");
         builder.add("game.psycho_mode.text", "Kill them all!");
         builder.add("game.psycho_mode.over", "Psycho Mode Over!");
-        builder.add("game.tip.cohort", "Killer Cohort");
+        builder.add("game.tip.cohort", "Killer's Cohort");
         builder.add("game.start_error.not_enough_players", "Game cannot start: %s players minimum are required.");
         builder.add("game.start_error.game_running", "Game cannot start: a game is already running. Please try again from the lobby.");
+        builder.add("game.start_error.voting_active", "Game cannot start: map voting is active. Please wait for voting to finish.");
 
         builder.add("wathe.gui.reset", "Clear");
 
@@ -177,7 +187,7 @@ public class WatheLangGen extends FabricLanguageProvider {
 
         builder.add("commands.supporter_only", "Super silly supporter commands are reserved for Patreon and YouTube members; if you wanna try them out, please consider supporting! <3");
 
-        builder.add("wathe.midnightconfig.title", "The Last Voyage of the Harpy Express - Config");
+        builder.add("wathe.midnightconfig.title", "The Harpy Express - Final Voyage - Config");
         builder.add("wathe.midnightconfig.ultraPerfMode", "Ultra Performance Mode");
         builder.add("wathe.midnightconfig.ultraPerfMode.tooltip", "Disables scenery for a worse visual experience but maximum performance. Lowers render distance to 2.");
         builder.add("wathe.midnightconfig.disableScreenShake", "Disable Screen Shake");
@@ -186,6 +196,8 @@ public class WatheLangGen extends FabricLanguageProvider {
         builder.add("wathe.midnightconfig.enum.SnowModeConfig.NO_OPTIMIZATION", "Default");
         builder.add("wathe.midnightconfig.enum.SnowModeConfig.BOX_COLLIDER", "Box Collider");
         builder.add("wathe.midnightconfig.enum.SnowModeConfig.TURN_OFF", "No particles");
+        builder.add("wathe.midnightconfig.snowflakeChance", "Snowflake Particle Count (%)");
+        builder.add("wathe.midnightconfig.snowflakeChance.tooltip", "Controls the spawn chance of snowflake particles.\n0 = Off, 100 = Maximum.");
 
         builder.add("wathe.argument.game_mode.invalid", "Game mode could not be found");
         builder.add("wathe.argument.map_effect.invalid", "Map effect could not be found");
@@ -227,6 +239,8 @@ public class WatheLangGen extends FabricLanguageProvider {
         // Shop errors
         builder.add("shop.error.not_available", "Shop Not Available");
         builder.add("shop.error.invalid_item", "Invalid Item");
+        builder.add("shop.error.on_cooldown", "Item On Cooldown");
+        builder.add("shop.error.out_of_stock", "Out Of Stock");
         builder.add("shop.error.purchase_denied", "Purchase Denied");
         builder.add("shop.error.purchase_failed", "Purchase Failed");
 
@@ -246,14 +260,14 @@ public class WatheLangGen extends FabricLanguageProvider {
         builder.add("hud.body.death_info", "Died %ss ago from ");
         builder.add("death_reason.wathe.generic", "Unknown");
         builder.add("death_reason.wathe.knife_stab", "Knife Stab");
-        builder.add("death_reason.wathe.gun_shot", "Gun Shot");
+        builder.add("death_reason.wathe.gun_shot", "Gunshot");
         builder.add("death_reason.wathe.gun_shot_backfire", "Gun Backfire");
         builder.add("death_reason.wathe.bat_hit", "Bat Hit");
-        builder.add("death_reason.wathe.grenade", "Grenade");
+        builder.add("death_reason.wathe.grenade", "Grenade Explosion");
         builder.add("death_reason.wathe.poison", "Poison");
-        builder.add("death_reason.wathe.fell_out_of_train", "Fell Out of Train");
+        builder.add("death_reason.wathe.fell_out_of_train", "Fell off the Train");
         builder.add("death_reason.wathe.escaped", "Escaped");
-        builder.add("death_reason.wathe.shot_innocent", "Shot Innocent");
+        builder.add("death_reason.wathe.shot_innocent", "Accidental Kill");
         builder.add("death_reason.wathe.mental_breakdown", "Mental Breakdown");
 
         // Disconnect messages
@@ -263,36 +277,55 @@ public class WatheLangGen extends FabricLanguageProvider {
         // Replay
         builder.add("replay.title", "=== Match Replay ===");
         builder.add("replay.footer", "--- Replay End ---");
-        builder.add("replay.death.wathe.knife_stab.killed", "%s was stabbed by %s with a knife");
-        builder.add("replay.death.wathe.knife_stab.died", "%s was stabbed with a knife");
-        builder.add("replay.death.wathe.gun_shot.killed", "%s was shot by %s");
-        builder.add("replay.death.wathe.gun_shot.died", "%s was shot");
-        builder.add("replay.death.wathe.gun_shot_backfire.died", "%s's gun backfired");
-        builder.add("replay.death.wathe.bat_hit.killed", "%s was beaten by %s with a bat");
-        builder.add("replay.death.wathe.bat_hit.died", "%s was beaten with a bat");
-        builder.add("replay.death.wathe.grenade.killed", "%s was blown up by %s's grenade");
-        builder.add("replay.death.wathe.grenade.died", "%s was blown up by a grenade");
-        builder.add("replay.death.wathe.poison.killed", "%s was poisoned by %s");
-        builder.add("replay.death.wathe.poison.died", "%s was poisoned");
-        builder.add("replay.death.wathe.fell_out_of_train.killed", "%s was pushed off the train by %s");
-        builder.add("replay.death.wathe.fell_out_of_train.died", "%s fell out of the train");
-        builder.add("replay.death.wathe.escaped.died", "%s escaped the game");
-        builder.add("replay.death.wathe.shot_innocent.killed", "%s was shot by %s (innocent kill)");
-        builder.add("replay.death.wathe.shot_innocent.died", "%s died from shooting an innocent");
-        builder.add("replay.death.wathe.mental_breakdown.died", "%s had a mental breakdown");
+        builder.add("replay.death.wathe.knife_stab.killed", "%s was assassinated by %s with a §eknife§r");
+        builder.add("replay.death.wathe.knife_stab.died", "%s was assassinated with a §eknife§r");
+        builder.add("replay.death.wathe.gun_shot.killed", "%s was shot by %s with a §egun§r");
+        builder.add("replay.death.wathe.gun_shot.died", "%s was shot with a §egun§r");
+        builder.add("replay.death.wathe.gun_shot_backfire.died", "%s's §egun§r backfired");
+        builder.add("replay.death.wathe.bat_hit.killed", "%s was killed by %s with a §ebat§r");
+        builder.add("replay.death.wathe.bat_hit.died", "%s was killed with a §ebat§r");
+        builder.add("replay.death.wathe.grenade.killed", "%s was blown up by %s's §egrenade§r");
+        builder.add("replay.death.wathe.grenade.died", "%s was blown up by a §egrenade§r");
+        builder.add("replay.death.wathe.poison.killed", "%s was §2poisoned§r by %s");
+        builder.add("replay.death.wathe.poison.died", "%s died from §2poison§r");
+        builder.add("replay.death.wathe.fell_out_of_train.killed", "%s was §7pushed§r off the train by %s");
+        builder.add("replay.death.wathe.fell_out_of_train.died", "%s §7fell§r off the train");
+        builder.add("replay.death.wathe.escaped.died", "%s §7escaped§r the game");
+        builder.add("replay.death.wathe.shot_innocent.killed", "%s was §ckilled by mistake§r by %s");
+        builder.add("replay.death.wathe.shot_innocent.died", "%s died from §ckilling an innocent§r");
+        builder.add("replay.death.wathe.mental_breakdown.died", "%s suffered a §cmental breakdown§r");
         builder.add("replay.death.unknown.killed", "%s was killed by %s");
         builder.add("replay.death.unknown.died", "%s died");
-        builder.add("replay.shop_purchase", "%s purchased %s for %d coins");
+        builder.add("replay.shop_purchase", "%s purchased %s for §6%d§r coin");
         builder.add("replay.item_pickup", "%s picked up %s");
         builder.add("replay.item_pickup.multiple", "%s picked up %s x%d");
-        builder.add("replay.poisoned.by", "%s was poisoned by %s");
-        builder.add("replay.poisoned", "%s was poisoned");
-        builder.add("replay.poisoned.wathe.food.by", "%s ate food poisoned by %s");
-        builder.add("replay.poisoned.wathe.food", "%s ate poisoned food");
-        builder.add("replay.poisoned.wathe.bed.by", "%s was stung by a scorpion planted by %s");
-        builder.add("replay.poisoned.wathe.bed", "%s was stung by a scorpion in bed");
-        builder.add("replay.skill.unknown.target", "%s used a skill on %s");
-        builder.add("replay.skill.unknown", "%s used a skill");
-        builder.add("replay.global.unknown", "A global event occurred");
+        builder.add("replay.poisoned.by", "%s was §2poisoned§r by %s");
+        builder.add("replay.poisoned", "%s is §2poisoned§r");
+        builder.add("replay.poisoned.wathe.food.by", "%s consumed food/drink §2poisoned§r by %s");
+        builder.add("replay.poisoned.wathe.food", "%s consumed §2poisoned§r food/drink");
+        builder.add("replay.poisoned.wathe.bed.by", "%s was stung by a scorpion §2placed§r by %s");
+        builder.add("replay.poisoned.wathe.bed", "%s was §2stung by a scorpion§r while sleeping");
+        builder.add("replay.platter_take.poisoned", "%1$s took %2$s §2poisoned§r by %3$s from the platter");
+        builder.add("replay.skill.unknown.target", "%s used a §bskill§r on %s");
+        builder.add("replay.skill.unknown", "%s used a §bskill§r");
+        builder.add("replay.global.unknown", "A §dglobal event§r occurred");
+
+        // Replay shield blocked
+        builder.add("replay.shield_blocked.wathe.psycho_mode.by", "%s's §dPsycho Mode shield§r blocked %s's attack");
+        builder.add("replay.shield_blocked.wathe.psycho_mode", "%s's §dPsycho Mode shield§r blocked fatal damage");
+        builder.add("replay.shield_blocked.by", "%s's §eshield§r blocked %s's attack");
+        builder.add("replay.shield_blocked", "%s's §eshield§r blocked fatal damage");
+
+        // Map voting GUI
+        builder.add("gui.wathe.map_voting.title", "Select Next Map");
+        builder.add("gui.wathe.map_voting.selecting", "Selecting map...");
+        builder.add("gui.wathe.map_voting.votes", "%s votes");
+        builder.add("gui.wathe.map_voting.my_vote", "Voted");
+        builder.add("gui.wathe.map_voting.player_range", "%1$s-%2$s players");
+        builder.add("gui.wathe.map_voting.players", "Players online: %s");
+        builder.add("gui.wathe.map_voting.voted_info", "Votes %s / Online %s");
+        builder.add("gui.wathe.map_voting.unavailable", "Unavailable");
+        builder.add("gui.wathe.map_voting.unavailable.min_players", "Requires at least %s players");
+        builder.add("gui.wathe.map_voting.unavailable.max_players", "Maximum %s players");
     }
 }
