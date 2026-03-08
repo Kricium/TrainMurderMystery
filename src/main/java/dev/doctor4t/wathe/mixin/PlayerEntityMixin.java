@@ -16,6 +16,7 @@ import dev.doctor4t.wathe.cca.PlayerStaminaComponent;
 import dev.doctor4t.wathe.config.datapack.MapEnhancementsConfiguration.MovementConfig;
 import dev.doctor4t.wathe.game.GameConstants;
 import dev.doctor4t.wathe.game.GameFunctions;
+import dev.doctor4t.wathe.index.WatheAttributes;
 import dev.doctor4t.wathe.index.WatheDataComponentTypes;
 import dev.doctor4t.wathe.index.WatheItems;
 import dev.doctor4t.wathe.index.WatheSounds;
@@ -27,6 +28,8 @@ import net.minecraft.component.type.FoodComponent;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.attribute.DefaultAttributeContainer;
+import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
@@ -63,6 +66,11 @@ public abstract class PlayerEntityMixin extends LivingEntity {
         super(entityType, world);
     }
 
+
+    @Inject(method = "createPlayerAttributes", at = @At("RETURN"))
+    private static void wathe$addMaxSprintTimeAttribute(CallbackInfoReturnable<DefaultAttributeContainer.Builder> cir) {
+        cir.getReturnValue().add(WatheAttributes.MAX_SPRINT_TIME, 200.0);
+    }
 
     @ModifyReturnValue(method = "getMovementSpeed", at = @At("RETURN"))
     public float wathe$overrideMovementSpeed(float original) {
@@ -101,7 +109,15 @@ public abstract class PlayerEntityMixin extends LivingEntity {
             }
 
             if (role != null && role.getMaxSprintTime() >= 0) {
-                int maxSprintTime = role.getMaxSprintTime();
+                // 设置属性 base value 为角色定义值（仅在变化时更新）
+                EntityAttributeInstance sprintAttr = this.getAttributeInstance(WatheAttributes.MAX_SPRINT_TIME);
+                if (sprintAttr != null && sprintAttr.getBaseValue() != role.getMaxSprintTime()) {
+                    sprintAttr.setBaseValue(role.getMaxSprintTime());
+                }
+                // 读取有效值（base + 所有 modifiers）
+                int maxSprintTime = sprintAttr != null
+                    ? (int) sprintAttr.getValue()
+                    : role.getMaxSprintTime();
                 float sprintingTicks = staminaComponent.getSprintingTicks();
                 boolean exhausted = staminaComponent.isExhausted();
                 // 疲惫机制

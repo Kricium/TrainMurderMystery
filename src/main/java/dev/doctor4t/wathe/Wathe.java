@@ -83,6 +83,7 @@ public class Wathe implements ModInitializer {
         // Registry initializers
         Reflection.initialize(WatheDataComponentTypes.class);
         WatheSounds.initialize();
+        WatheAttributes.initialize();
         WatheEntities.initialize();
         WatheBlocks.initialize();
         WatheItems.initialize();
