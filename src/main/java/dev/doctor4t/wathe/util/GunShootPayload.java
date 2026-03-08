@@ -129,7 +129,7 @@ public record GunShootPayload(int target) implements CustomPayload {
             ServerPlayNetworking.send(player, new ShootMuzzleS2CPayload(player.getUuidAsString()));
             if (!player.isCreative()) {
                 int cooldown = GameConstants.ITEM_COOLDOWNS.getOrDefault(mainHandStack.getItem(), 0);
-                // 非义警、非老兵的乘客阵营角色枪cd为20秒
+                // 非义警、非老兵的乘客阵营角色枪cd为15秒
                 if (mainHandStack.isIn(WatheItemTags.GUNS) && game.isInnocent(player)
                         && !game.isRole(player, WatheRoles.VIGILANTE) && !game.isRole(player, WatheRoles.VETERAN)) {
                     cooldown = GameConstants.INNOCENT_GUN_COOLDOWN;
