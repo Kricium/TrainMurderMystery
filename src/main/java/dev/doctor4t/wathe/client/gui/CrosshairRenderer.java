@@ -3,6 +3,7 @@ package dev.doctor4t.wathe.client.gui;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import dev.doctor4t.wathe.Wathe;
+import dev.doctor4t.wathe.game.GameFunctions;
 import dev.doctor4t.wathe.index.WatheItems;
 import dev.doctor4t.wathe.item.DerringerItem;
 import dev.doctor4t.wathe.item.KnifeItem;
@@ -13,9 +14,11 @@ import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.render.RenderTickCounter;
 import net.minecraft.entity.player.ItemCooldownManager;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.projectile.ProjectileUtil;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.EntityHitResult;
+import net.minecraft.util.hit.HitResult;
 import org.jetbrains.annotations.NotNull;
 
 public class CrosshairRenderer {
@@ -29,6 +32,13 @@ public class CrosshairRenderer {
     private static final Identifier BAT_BACKGROUND = Wathe.id("hud/bat_background");
 
 
+    /**
+     * 准星用的射线检测，过滤掉隐身玩家（隐身玩家不触发准星变化，但枪械仍可命中）
+     */
+    private static HitResult getVisibleGunTarget(PlayerEntity user, double range) {
+        return ProjectileUtil.getCollision(user, entity -> entity instanceof PlayerEntity p && GameFunctions.isPlayerAliveAndSurvival(p) && !entity.isInvisible(), range);
+    }
+
     public static void renderCrosshair(@NotNull MinecraftClient client, @NotNull ClientPlayerEntity player, DrawContext context, RenderTickCounter tickCounter) {
         if (!client.options.getPerspective().isFirstPerson()) return;
         boolean target = false;
@@ -37,9 +47,9 @@ public class CrosshairRenderer {
         RenderSystem.defaultBlendFunc();
         RenderSystem.disableBlend();
         ItemStack mainHandStack = player.getMainHandStack();
-        if (mainHandStack.isOf(WatheItems.REVOLVER) && !player.getItemCooldownManager().isCoolingDown(mainHandStack.getItem()) && RevolverItem.getGunTarget(player) instanceof EntityHitResult entityHitResult && !entityHitResult.getEntity().isInvisible()) {
+        if (mainHandStack.isOf(WatheItems.REVOLVER) && !player.getItemCooldownManager().isCoolingDown(mainHandStack.getItem()) && getVisibleGunTarget(player, 30f) instanceof EntityHitResult) {
             target = true;
-        } else if (mainHandStack.isOf(WatheItems.DERRINGER) && !player.getItemCooldownManager().isCoolingDown(mainHandStack.getItem()) && DerringerItem.getGunTarget(player) instanceof EntityHitResult entityHitResult && !entityHitResult.getEntity().isInvisible()) {
+        } else if (mainHandStack.isOf(WatheItems.DERRINGER) && !player.getItemCooldownManager().isCoolingDown(mainHandStack.getItem()) && getVisibleGunTarget(player, 7f) instanceof EntityHitResult) {
             target = true;
         } else if (mainHandStack.isOf(WatheItems.KNIFE)) {
             ItemCooldownManager manager = player.getItemCooldownManager();
