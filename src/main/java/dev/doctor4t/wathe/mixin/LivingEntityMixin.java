@@ -1,6 +1,7 @@
 package dev.doctor4t.wathe.mixin;
 
 import dev.doctor4t.wathe.Wathe;
+import dev.doctor4t.wathe.api.event.AllowPlayerPunching;
 import dev.doctor4t.wathe.cca.GameWorldComponent;
 import dev.doctor4t.wathe.cca.MapEnhancementsWorldComponent;
 import dev.doctor4t.wathe.cca.PlayerStaminaComponent;
@@ -27,7 +28,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(LivingEntity.class)
 public abstract class LivingEntityMixin extends EntityMixin {
     @Unique
-    private static final EntityAttributeModifier KNIFE_KNOCKBACK_MODIFIER = new EntityAttributeModifier(Wathe.id("knife_knockback_modifier"), 1, EntityAttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+    private static final EntityAttributeModifier WEAPON_KNOCKBACK_MODIFIER = new EntityAttributeModifier(Wathe.id("weapon_knockback_modifier"), .5f, EntityAttributeModifier.Operation.ADD_VALUE);
 
     @Unique
     private float wathe$lastGravityMultiplier = Float.NaN;
@@ -44,8 +45,9 @@ public abstract class LivingEntityMixin extends EntityMixin {
     @Inject(method = "tick", at = @At("HEAD"))
     public void wathe$addKnockbackWithKnife(CallbackInfo ci) {
         if ((Object) this instanceof PlayerEntity player) {
-            EntityAttributeModifier v = new EntityAttributeModifier(Wathe.id("knife_knockback_modifier"), .5f, EntityAttributeModifier.Operation.ADD_VALUE);
-            updateAttribute(player.getAttributeInstance(EntityAttributes.GENERIC_ATTACK_KNOCKBACK), v, player.getMainHandStack().isOf(WatheItems.KNIFE));
+            boolean shouldKnockback = player.getMainHandStack().isOf(WatheItems.KNIFE)
+                    || AllowPlayerPunching.EVENT.invoker().allowPunching(player, player);
+            updateAttribute(player.getAttributeInstance(EntityAttributes.GENERIC_ATTACK_KNOCKBACK), WEAPON_KNOCKBACK_MODIFIER, shouldKnockback);
         }
     }
 
