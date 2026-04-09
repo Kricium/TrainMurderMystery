@@ -40,6 +40,13 @@ public class InGameHudMixin {
 
     @Inject(method = "renderMainHud", at = @At("TAIL"))
     private void wathe$renderHud(DrawContext context, RenderTickCounter tickCounter, CallbackInfo ci) {
+        // 对讲机广播消息渲染（独立于 trainComponent，始终渲染）
+        ClientPlayerEntity broadcastPlayer = this.client.player;
+        if (broadcastPlayer != null) {
+            TextRenderer broadcastRenderer = MinecraftClient.getInstance().textRenderer;
+            WalkieTalkieBroadcastRenderer.renderHud(broadcastRenderer, broadcastPlayer, context);
+        }
+
         if (WatheClient.trainComponent != null && WatheClient.trainComponent.hasHud()) {
             ClientPlayerEntity player = this.client.player;
             if (player == null) return;

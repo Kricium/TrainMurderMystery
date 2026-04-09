@@ -139,6 +139,8 @@ public class WatheLangGen extends FabricLanguageProvider {
         builder.add("tooltip.wathe.walkie_talkie.channel", "Channel: %s");
         builder.add("tooltip.wathe.walkie_talkie.hold", "Hold in hand to transmit");
         builder.add("tooltip.wathe.walkie_talkie.right_click", "Right-click to switch channel");
+        // 对讲机广播 HUD 提示
+        builder.add("hud.wathe.walkie_talkie.more_messages", "...and %s more messages");
 
         builder.add("game.win.killers", "The killers reached their kill count, they win!");
         builder.add("game.win.passengers", "All killers were eliminated: the passengers win!");

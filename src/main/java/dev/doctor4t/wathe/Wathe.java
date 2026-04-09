@@ -144,6 +144,8 @@ public class Wathe implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(NoteEditPayload.ID, NoteEditPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(MapVotePayload.ID, MapVotePayload.CODEC);
         PayloadTypeRegistry.playC2S().register(WalkieTalkieChannelPayload.ID, WalkieTalkieChannelPayload.CODEC);
+        // 注册对讲机广播 S2C 数据包（用于在屏幕上方显示对讲机文字消息）
+        PayloadTypeRegistry.playS2C().register(WalkieTalkieBroadcastPayload.ID, WalkieTalkieBroadcastPayload.CODEC);
         ServerPlayNetworking.registerGlobalReceiver(KnifeStabPayload.ID, new KnifeStabPayload.Receiver());
         ServerPlayNetworking.registerGlobalReceiver(GunShootPayload.ID, new GunShootPayload.Receiver());
         ServerPlayNetworking.registerGlobalReceiver(StoreBuyPayload.ID, new StoreBuyPayload.Receiver());
@@ -154,6 +156,9 @@ public class Wathe implements ModInitializer {
         // Register event handlers
         WatheEventHandlers.register();
         GameRecordHooks.register();
+
+        // 注册对讲机聊天拦截处理器（手持对讲机发送消息时广播给同频道玩家）
+        WalkieTalkieChatHandler.register();
 
         // 注册回放默认格式化器
         ReplayRegistry.registerFormatter(GameRecordTypes.DEATH, DefaultReplayFormatters::formatDeath);
