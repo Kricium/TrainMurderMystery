@@ -9,6 +9,7 @@ import dev.doctor4t.wathe.WatheConfig;
 import dev.doctor4t.wathe.api.Role;
 import dev.doctor4t.wathe.api.WatheRoles;
 import dev.doctor4t.wathe.cca.*;
+import dev.doctor4t.wathe.client.gui.WalkieTalkieBroadcastRenderer;
 import dev.doctor4t.wathe.client.gui.RoundTextRenderer;
 import dev.doctor4t.wathe.client.gui.StoreRenderer;
 import dev.doctor4t.wathe.client.gui.TimeRenderer;
@@ -26,6 +27,7 @@ import dev.doctor4t.wathe.client.util.WatheItemTooltips;
 import dev.doctor4t.wathe.entity.FirecrackerEntity;
 import dev.doctor4t.wathe.entity.NoteEntity;
 import dev.doctor4t.wathe.entity.PlayerBodyEntity;
+import dev.doctor4t.wathe.item.WalkieTalkieItem;
 import dev.doctor4t.wathe.api.event.AllowPlayerChat;
 import dev.doctor4t.wathe.api.event.GetInstinctHighlight;
 import dev.doctor4t.wathe.game.GameConstants;
@@ -58,6 +60,7 @@ import net.minecraft.client.util.InputUtil;
 import net.minecraft.client.util.ModelIdentifier;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.ItemEntity;
+import net.minecraft.item.ItemStack;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.registry.Registries;
 import net.minecraft.sound.SoundCategory;
@@ -123,6 +126,7 @@ public class WatheClient implements ClientModInitializer {
         // Clear skin textures on disconnect (release GPU resources)
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             ItemSkinTextureManager.getInstance().clearAll();
+            WalkieTalkieBroadcastRenderer.clear();
         });
 
         // Block render layers
@@ -360,6 +364,15 @@ public class WatheClient implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(AnnounceWelcomePayload.ID, new AnnounceWelcomePayload.Receiver());
         ClientPlayNetworking.registerGlobalReceiver(AnnounceEndingPayload.ID, new AnnounceEndingPayload.Receiver());
         ClientPlayNetworking.registerGlobalReceiver(TaskCompletePayload.ID, new TaskCompletePayload.Receiver());
+        // 注册对讲机广播消息 S2C 数据包接收器
+        ClientPlayNetworking.registerGlobalReceiver(WalkieTalkieBroadcastPayload.ID, new WalkieTalkieBroadcastPayload.Receiver());
+
+        // 注册 AllowPlayerChat 事件：手持对讲机时允许使用聊天框发送消息
+        AllowPlayerChat.EVENT.register(player -> {
+            if (player == null) return false;
+            ItemStack mainHandStack = player.getMainHandStack();
+            return mainHandStack.getItem() instanceof WalkieTalkieItem;
+        });
 
         // Instinct keybind
         instinctKeybind = KeyBindingHelper.registerKeyBinding(new KeyBinding(

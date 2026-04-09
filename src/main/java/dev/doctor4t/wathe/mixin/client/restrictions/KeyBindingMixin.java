@@ -20,12 +20,6 @@ public abstract class KeyBindingMixin {
     @Unique
     private boolean shouldSuppressKey() {
         boolean result = false;
-        //在大厅聊天，在游戏内不可以，旁观和创造始终可以
-        if (WatheClient.shouldDisableChat()) {
-            result = this.equals(MinecraftClient.getInstance().options.chatKey) ||
-                    this.equals(MinecraftClient.getInstance().options.commandKey);
-        }
-        if(result) return result;
         //游戏开始之后根据地图配置决定是否屏蔽跳跃键
         if (WatheClient.gameComponent != null && WatheClient.gameComponent.isRunning() && WatheClient.isPlayerPlayingAndAlive()){
             if (WatheClient.mapEnhancementsWorldComponent != null) {
