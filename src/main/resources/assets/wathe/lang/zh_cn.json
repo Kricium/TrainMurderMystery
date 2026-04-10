@@ -457,6 +457,7 @@
   "tip.letter.veteran.tooltip1": "你的军旅经验在这次旅程中至关重要。",
   "tip.letter.veteran.tooltip2": "你有一把使用次数有限的刀。请珍惜每一次出刀机会。不要错杀好人！",
   "hud.body.death_info": "死于 %s 秒前，死因：",
+  "hud.match_player_count": "%s 人对局",
   "hud.mood.breakdown_warning": "精神即将崩溃！",
   "hud.wathe.walkie_talkie.more_messages": "还有 %s 条消息",
 

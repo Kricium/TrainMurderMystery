@@ -332,6 +332,7 @@
   "gui.wathe.map_voting.voted_info": "Votes %s / Online %s",
   "gui.wathe.map_voting.votes": "%s votes",
   "hud.body.death_info": "Died %ss ago from ",
+  "hud.match_player_count": "%s players in match",
   "hud.mood.breakdown_warning": "MENTAL BREAKDOWN IMMINENT!",
   "item.wathe.bat": "Bat",
   "item.wathe.blackout": "Blackout",

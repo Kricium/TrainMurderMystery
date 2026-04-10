@@ -5,7 +5,6 @@ import dev.doctor4t.wathe.cca.GameTimeComponent;
 import dev.doctor4t.wathe.cca.GameWorldComponent;
 import dev.doctor4t.wathe.client.WatheClient;
 import dev.doctor4t.wathe.game.GameConstants;
-import dev.doctor4t.wathe.game.GameFunctions;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.network.ClientPlayerEntity;
@@ -18,9 +17,7 @@ public class TimeRenderer {
     public static float offsetDelta = 0f;
 
     public static void renderHud(TextRenderer renderer, @NotNull ClientPlayerEntity player, @NotNull DrawContext context, float delta) {
-        GameWorldComponent gameWorldComponent = GameWorldComponent.KEY.get(player.getWorld());
-        Role role = gameWorldComponent.getRole(player);
-        if (gameWorldComponent.isRunning() && (role != null && role.canSeeTime() || WatheClient.canSeeSpectatorInformation())) {
+        if (shouldRender(player)) {
             int time = GameTimeComponent.KEY.get(player.getWorld()).getTime();
             if (Math.abs(view.getTarget() - time) > 10) offsetDelta = time > view.getTarget() ? .6f : -.6f;
             if (time < GameConstants.getInTicks(1, 0)) {
@@ -38,6 +35,12 @@ public class TimeRenderer {
             view.render(renderer, context, 0, 0, colour, delta);
             context.getMatrices().pop();
         }
+    }
+
+    public static boolean shouldRender(@NotNull ClientPlayerEntity player) {
+        GameWorldComponent gameWorldComponent = GameWorldComponent.KEY.get(player.getWorld());
+        Role role = gameWorldComponent.getRole(player);
+        return gameWorldComponent.isRunning() && ((role != null && role.canSeeTime()) || WatheClient.canSeeSpectatorInformation());
     }
 
     public static void tick() {
@@ -69,16 +72,18 @@ public class TimeRenderer {
         public void render(TextRenderer renderer, @NotNull DrawContext context, int x, int y, int colour, float delta) {
             context.getMatrices().push();
             context.getMatrices().translate(x, y, 0);
-            context.getMatrices().translate(16, 0, 0);
-            this.seconds.getRight().render(renderer, context, colour, delta);
-            context.getMatrices().translate(-8, 0, 0);
-            this.seconds.getLeft().render(renderer, context, colour, delta);
-            context.getMatrices().translate(-8, 0, 0);
-            context.drawTextWithShadow(renderer, ":", 2, 0, colour);
-            context.getMatrices().translate(-8, 0, 0);
-            this.minutes.getRight().render(renderer, context, colour, delta);
-            context.getMatrices().translate(-8, 0, 0);
-            this.minutes.getLeft().render(renderer, context, colour, delta);
+            renderDigit(renderer, context, this.minutes.getLeft(), -16, colour, delta);
+            renderDigit(renderer, context, this.minutes.getRight(), -8, colour, delta);
+            context.drawTextWithShadow(renderer, ":", -renderer.getWidth(":") / 2, 0, colour);
+            renderDigit(renderer, context, this.seconds.getLeft(), 8, colour, delta);
+            renderDigit(renderer, context, this.seconds.getRight(), 16, colour, delta);
+            context.getMatrices().pop();
+        }
+
+        private void renderDigit(TextRenderer renderer, @NotNull DrawContext context, ScrollingDigit digit, int x, int colour, float delta) {
+            context.getMatrices().push();
+            context.getMatrices().translate(x, 0, 0);
+            digit.render(renderer, context, colour, delta);
             context.getMatrices().pop();
         }
 
@@ -110,6 +115,10 @@ public class TimeRenderer {
             int digit = MathHelper.floor(value) % (this.cap6 ? 6 : 10);
             int digitNext = MathHelper.floor(value + 1) % (this.cap6 ? 6 : 10);
             double offset = Math.pow(value % 1, this.power);
+            String digitText = String.valueOf(digit);
+            String digitNextText = String.valueOf(digitNext);
+            int digitX = -renderer.getWidth(digitText) / 2;
+            int digitNextX = -renderer.getWidth(digitNextText) / 2;
             colour &= 0xFFFFFF;
             context.getMatrices().push();
             context.getMatrices().translate(0, -offset * (renderer.fontHeight + 2), 0);
@@ -117,9 +126,9 @@ public class TimeRenderer {
             int baseColour = colour | (int) alpha << 24;
             int nextColour = colour | (int) (Math.abs(offset) * 255.0f) << 24;
             if ((baseColour & -67108864) != 0)
-                context.drawTextWithShadow(renderer, String.valueOf(digit), 0, 0, baseColour);
+                context.drawTextWithShadow(renderer, digitText, digitX, 0, baseColour);
             if ((nextColour & -67108864) != 0)
-                context.drawTextWithShadow(renderer, String.valueOf(digitNext), 0, renderer.fontHeight + 2, nextColour);
+                context.drawTextWithShadow(renderer, digitNextText, digitNextX, renderer.fontHeight + 2, nextColour);
             context.getMatrices().pop();
         }
 
