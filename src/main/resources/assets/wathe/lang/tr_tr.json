@@ -357,5 +357,9 @@
   "tip.letter.room.grand_suite": "grand suitin anahtarı",
   "tip.letter.room.twin_cabin": "ikiz kabininize girmeniz için anahtarınız",
   "tip.letter.tooltip1": "1 Ocak 1923 tarihli yolculuğunuzda kullanılmak üzere.",
-  "tip.letter.tooltip2": "Harpy Express keyifli ve güvenli bir yolculuk diler."
+  "tip.letter.tooltip2": "Harpy Express keyifli ve güvenli bir yolculuk diler.",
+  "wathe.midnightconfig.instinctMode": "Killer Instinct Mode",
+  "wathe.midnightconfig.instinctMode.tooltip": "Choose how Killer Instinct is activated.\n\nHold: Active while key is held.\nToggle: Press to activate, press again to deactivate.",
+  "wathe.midnightconfig.enum.InstinctModeConfig.HOLD": "Hold",
+  "wathe.midnightconfig.enum.InstinctModeConfig.TOGGLE": "Toggle"
 }

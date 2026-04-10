@@ -341,6 +341,10 @@
   "credits.wathe.thank_you": "Tusen takk for at du spilte Harpyekspressens siste reise!\nJeg og teamet mitt brukte mye tid på denne modden,\n og vi håper du liker den. Hvis du gjør\n det og ønsker å lage en video eller strømme,\nhusk å kreditere kanalen min, videoen og mod-siden!\n - RAT / doctor4t",
   "tmm.gui.reset": "Tøk",
   "wathe.midnightconfig.disableScreenShake": "Deaktiver skjermristing",
+  "wathe.midnightconfig.instinctMode": "Killer Instinct Mode",
+  "wathe.midnightconfig.instinctMode.tooltip": "Choose how Killer Instinct is activated.\n\nHold: Active while key is held.\nToggle: Press to activate, press again to deactivate.",
+  "wathe.midnightconfig.enum.InstinctModeConfig.HOLD": "Hold",
+  "wathe.midnightconfig.enum.InstinctModeConfig.TOGGLE": "Toggle",
   "wathe.midnightconfig.title": "Harpyekspressens siste reise - Konfigurasjon",
   "wathe.midnightconfig.ultraPerfMode": "Ultraytelsesmodus",
   "wathe.midnightconfig.ultraPerfMode.tooltip": "Fjerner detaljer gir en dårligere visuell opplevelse, men maksimerer ytelsen. Setter kantavstanden til 2."

@@ -341,6 +341,10 @@
   "tip.letter.tooltip2": "La Sirène chúc bạn một chuyến đi vui vẻ và an toàn.",
   "tmm.gui.reset": "Xóa",
   "wathe.midnightconfig.disableScreenShake": "Tắt Rung Màn Hình",
+  "wathe.midnightconfig.instinctMode": "Killer Instinct Mode",
+  "wathe.midnightconfig.instinctMode.tooltip": "Choose how Killer Instinct is activated.\n\nHold: Active while key is held.\nToggle: Press to activate, press again to deactivate.",
+  "wathe.midnightconfig.enum.InstinctModeConfig.HOLD": "Hold",
+  "wathe.midnightconfig.enum.InstinctModeConfig.TOGGLE": "Toggle",
   "wathe.midnightconfig.title": "Chuyến Đi Cuối Cùng Của Tàu Harpy Express - Cấu Hình",
   "wathe.midnightconfig.ultraPerfMode": "Chế Độ Hiệu Suất Tối Đa",
   "wathe.midnightconfig.ultraPerfMode.tooltip": "Tắt cảnh vật xung quanh, hình ảnh sẽ xấu hơn nhưng hiệu suất tối đa. Giảm tầm nhìn xuống 2."

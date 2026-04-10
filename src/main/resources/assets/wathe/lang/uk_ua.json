@@ -341,6 +341,10 @@
   "tip.letter.tooltip2": "La Sirène бажає вам приємної та безпечної подорожі.",
   "tmm.gui.reset": "Очистити",
   "wathe.midnightconfig.disableScreenShake": "Вимкнути тремтіння екрана",
+  "wathe.midnightconfig.instinctMode": "Killer Instinct Mode",
+  "wathe.midnightconfig.instinctMode.tooltip": "Choose how Killer Instinct is activated.\n\nHold: Active while key is held.\nToggle: Press to activate, press again to deactivate.",
+  "wathe.midnightconfig.enum.InstinctModeConfig.HOLD": "Hold",
+  "wathe.midnightconfig.enum.InstinctModeConfig.TOGGLE": "Toggle",
   "wathe.midnightconfig.title": "The Last Voyage of the Harpy Express - Налаштування",
   "wathe.midnightconfig.ultraPerfMode": "Режим Ультра Продуктивності",
   "wathe.midnightconfig.ultraPerfMode.tooltip": "Вимикає декорації для гіршого вигляду, але максимальної продуктивності. Знижує дальність промальовування до 2."

@@ -341,6 +341,10 @@
   "tip.letter.tooltip2": "La Sirène le desea un placentero y seguro viaje.",
   "tmm.gui.reset": "Borrar todo",
   "wathe.midnightconfig.disableScreenShake": "Deshabilitar Screen Shake",
+  "wathe.midnightconfig.instinctMode": "Killer Instinct Mode",
+  "wathe.midnightconfig.instinctMode.tooltip": "Choose how Killer Instinct is activated.\n\nHold: Active while key is held.\nToggle: Press to activate, press again to deactivate.",
+  "wathe.midnightconfig.enum.InstinctModeConfig.HOLD": "Hold",
+  "wathe.midnightconfig.enum.InstinctModeConfig.TOGGLE": "Toggle",
   "wathe.midnightconfig.title": "El Último Viaje del Harpy Express - Configuración",
   "wathe.midnightconfig.ultraPerfMode": "Modo Ultra Rendimiento",
   "wathe.midnightconfig.ultraPerfMode.tooltip": "Deshabilita el escenario para una experiencia visual peor pero máximo rendimiento. Baja la distancia de renderizado a 2."

@@ -341,6 +341,10 @@
   "tip.letter.tooltip2": "La Sirène ønsker dig en behagelig og sikker rejse.",
   "tmm.gui.reset": "Ryd",
   "wathe.midnightconfig.disableScreenShake": "Sluk Skærm Rystelse",
+  "wathe.midnightconfig.instinctMode": "Killer Instinct Mode",
+  "wathe.midnightconfig.instinctMode.tooltip": "Choose how Killer Instinct is activated.\n\nHold: Active while key is held.\nToggle: Press to activate, press again to deactivate.",
+  "wathe.midnightconfig.enum.InstinctModeConfig.HOLD": "Hold",
+  "wathe.midnightconfig.enum.InstinctModeConfig.TOGGLE": "Toggle",
   "wathe.midnightconfig.title": "Harpy Expressens Sidste Rejse - Configuration",
   "wathe.midnightconfig.ultraPerfMode": "Ultra Ydeævne Tilstand",
   "wathe.midnightconfig.ultraPerfMode.tooltip": "Fjerner sceneriet for en værre visuel oplevelse men maksimere ydeevne. Sætter randerings distance til 2."

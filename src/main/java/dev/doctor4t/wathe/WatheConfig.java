@@ -9,8 +9,16 @@ public class WatheConfig extends MidnightConfig {
     @Entry
     public static SnowModeConfig snowOptLevel = SnowModeConfig.NO_OPTIMIZATION;
 
+    @Entry
+    public static InstinctModeConfig instinctMode = InstinctModeConfig.HOLD;
+
     @Entry(isSlider = true, min = 0, max = 100)
     public static int snowflakeChance = 100;
+
+    public enum InstinctModeConfig {
+        HOLD,
+        TOGGLE,
+    }
 
     public enum SnowModeConfig {
         NO_OPTIMIZATION,  // Standard behavior: checking if the particle hit the block.

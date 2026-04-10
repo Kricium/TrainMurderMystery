@@ -341,6 +341,10 @@
   "tip.letter.tooltip2": "ラ・シレーヌ旅行会社より、お客様の旅路が楽しくありますよう。",
   "tmm.gui.reset": "キャンセル",
   "wathe.midnightconfig.disableScreenShake": "画面の揺れを無効化",
+  "wathe.midnightconfig.instinctMode": "キラー本能モード",
+  "wathe.midnightconfig.instinctMode.tooltip": "キラー本能の起動方法を選択します。\n\nホールド：キーを押している間有効。\nトグル：1回押すと有効、もう1回押すと無効。",
+  "wathe.midnightconfig.enum.InstinctModeConfig.HOLD": "ホールド",
+  "wathe.midnightconfig.enum.InstinctModeConfig.TOGGLE": "トグル",
   "wathe.midnightconfig.title": "The Last Voyage of the Harpy Express - コンフィグ",
   "wathe.midnightconfig.ultraPerfMode": "ウルトラパフォーマンスモード",
   "wathe.midnightconfig.ultraPerfMode.tooltip": "景観描写を無効にし、パフォーマンスを最大化します。描画距離は2チャンクになります。"

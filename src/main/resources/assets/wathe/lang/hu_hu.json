@@ -363,6 +363,10 @@
   "tmm.gui.reset": "Tiszta",
   
   "wathe.midnightconfig.disableScreenShake": "Kapcsold ki a képernyőremegést",
+  "wathe.midnightconfig.instinctMode": "Killer Instinct Mode",
+  "wathe.midnightconfig.instinctMode.tooltip": "Choose how Killer Instinct is activated.\n\nHold: Active while key is held.\nToggle: Press to activate, press again to deactivate.",
+  "wathe.midnightconfig.enum.InstinctModeConfig.HOLD": "Hold",
+  "wathe.midnightconfig.enum.InstinctModeConfig.TOGGLE": "Toggle",
   "wathe.midnightconfig.title": "Az utolsó utja a Harpy Expressnek - Konfig",
   "wathe.midnightconfig.ultraPerfMode": "Ultra Teljesítmény Mód",
   "wathe.midnightconfig.ultraPerfMode.tooltip": "Kikapcsolja a tájt egy rosszabb vizuális élményért de maximális teljesitményért. Lejebb visszi a látótávolságot 2 chunk-ra."

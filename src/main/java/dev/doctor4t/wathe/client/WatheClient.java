@@ -87,6 +87,7 @@ public class WatheClient implements ClientModInitializer {
     public static KeyBinding mapVoteKeybind;
     public static float prevInstinctLightLevel = -.04f;
     public static float instinctLightLevel = -.04f;
+    public static boolean instinctToggleActive = false;
 
     // 投票界面自动打开标记：游戏结束时自动打开一次
     private static boolean hasAutoOpenedVotingScreen = false;
@@ -127,6 +128,7 @@ public class WatheClient implements ClientModInitializer {
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             ItemSkinTextureManager.getInstance().clearAll();
             WalkieTalkieBroadcastRenderer.clear();
+            instinctToggleActive = false;
         });
 
         // Block render layers
@@ -269,6 +271,15 @@ public class WatheClient implements ClientModInitializer {
         WatheItemTooltips.addTooltips();
 
         ClientTickEvents.START_WORLD_TICK.register(clientWorld -> {
+            // Handle instinct toggle mode — drain all key press events via while loop
+            boolean instinctPressed = false;
+            while (instinctKeybind.wasPressed()) {
+                instinctPressed = true;
+            }
+            if (WatheConfig.instinctMode == WatheConfig.InstinctModeConfig.TOGGLE && instinctPressed) {
+                instinctToggleActive = !instinctToggleActive;
+            }
+
             prevInstinctLightLevel = instinctLightLevel;
             // instinct night vision
             if (WatheClient.isInstinctEnabledAndIsKiller()) {
@@ -279,6 +290,10 @@ public class WatheClient implements ClientModInitializer {
             instinctLightLevel = MathHelper.clamp(instinctLightLevel, -.04f, .5f);
             if (!prevGameRunning && gameComponent.isRunning()) {
                 MinecraftClient.getInstance().player.getInventory().selectedSlot = 8;
+            }
+            // Reset instinct toggle when game stops
+            if (prevGameRunning && !gameComponent.isRunning()) {
+                instinctToggleActive = false;
             }
             prevGameRunning = gameComponent.isRunning();
 
@@ -581,11 +596,18 @@ public class WatheClient implements ClientModInitializer {
         return -1;
     }
 
+    private static boolean isInstinctKeyActive() {
+        if (WatheConfig.instinctMode == WatheConfig.InstinctModeConfig.TOGGLE) {
+            return instinctToggleActive;
+        }
+        return instinctKeybind.isPressed();
+    }
+
     public static boolean isInstinctEnabledAndIsKiller() {
-        return instinctKeybind.isPressed() && ((isPlayerPlayingAndAlive() && isKiller())|| canSeeSpectatorInformation());
+        return isInstinctKeyActive() && ((isPlayerPlayingAndAlive() && isKiller())|| canSeeSpectatorInformation());
     }
 
     public static boolean isInstinctEnabled() {
-        return instinctKeybind.isPressed();
+        return isInstinctKeyActive();
     }
 }
