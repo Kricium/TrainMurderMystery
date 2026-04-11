@@ -36,6 +36,7 @@ public class WalkieTalkieBroadcastRenderer {
 
     /** 消息起始 Y 坐标（距屏幕顶部的像素距离） */
     private static final int START_Y = 20;
+    private static final int MATCH_PLAYER_COUNT_GAP = 6;
 
     /** 每条消息之间的垂直间距（像素） */
     private static final int MESSAGE_SPACING = 20;
@@ -93,7 +94,7 @@ public class WalkieTalkieBroadcastRenderer {
         int screenWidth = context.getScaledWindowWidth();
         int screenHeight = context.getScaledWindowHeight();
         int maxTextWidth = screenWidth - PADDING * 4;
-        int y = START_Y;
+        int y = getStartY(renderer, player);
         int count = messageQueue.size();
 
         for (int i = 0; i < count; i++) {
@@ -138,5 +139,12 @@ public class WalkieTalkieBroadcastRenderer {
      */
     public static void clear() {
         messageQueue.clear();
+    }
+
+    private static int getStartY(TextRenderer renderer, ClientPlayerEntity player) {
+        if (player != null && MatchPlayerCountRenderer.shouldRender(player)) {
+            return MatchPlayerCountRenderer.getBottomY(renderer, player) + MATCH_PLAYER_COUNT_GAP;
+        }
+        return START_Y;
     }
 }
