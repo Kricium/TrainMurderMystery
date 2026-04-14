@@ -15,6 +15,9 @@ public class WatheConfig extends MidnightConfig {
     @Entry
     public static InstinctModeConfig instinctMode = InstinctModeConfig.HOLD;
 
+    @Entry
+    public static boolean showMatchPlayerCount = true;
+
     @Entry(isSlider = true, min = 0, max = 100)
     public static int snowflakeChance = 100;
 

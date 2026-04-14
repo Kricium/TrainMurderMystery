@@ -1,5 +1,6 @@
 package dev.doctor4t.wathe.client.gui;
 
+import dev.doctor4t.wathe.WatheConfig;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.text.Text;
@@ -13,7 +14,7 @@ public final class MatchPlayerCountRenderer {
     }
 
     public static void renderHud(@NotNull TextRenderer renderer, @NotNull DrawContext context, @NotNull HudHeaderLayout layout) {
-        if (!layout.showMatchCount()) {
+        if (!WatheConfig.showMatchPlayerCount || !layout.showMatchCount()) {
             return;
         }
 

@@ -202,6 +202,8 @@ public class WatheLangGen extends FabricLanguageProvider {
         builder.add("wathe.midnightconfig.ultraPerfMode", "Ultra Performance Mode");
         builder.add("wathe.midnightconfig.ultraPerfMode.tooltip", "Disables scenery for a worse visual experience but maximum performance. Lowers render distance to 2.");
         builder.add("wathe.midnightconfig.disableScreenShake", "Disable Screen Shake");
+        builder.add("wathe.midnightconfig.showMatchPlayerCount", "Show Match Player Count");
+        builder.add("wathe.midnightconfig.showMatchPlayerCount.tooltip", "Controls whether the current match player count is shown in the HUD.");
         builder.add("wathe.midnightconfig.snowOptLevel", "Snow particles mode");
         builder.add("wathe.midnightconfig.snowOptLevel.tooltip", "How snow particle collisions will be processed.\n\n'Box Collider' may not work on all maps.");
         builder.add("wathe.midnightconfig.enum.SnowModeConfig.NO_OPTIMIZATION", "Default");
