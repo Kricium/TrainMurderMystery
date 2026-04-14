@@ -209,6 +209,8 @@ public class WatheLangGen extends FabricLanguageProvider {
         builder.add("wathe.midnightconfig.enum.SnowModeConfig.TURN_OFF", "No particles");
         builder.add("wathe.midnightconfig.snowflakeChance", "Snowflake Particle Count (%)");
         builder.add("wathe.midnightconfig.snowflakeChance.tooltip", "Controls the spawn chance of snowflake particles.\n0 = Off, 100 = Maximum.");
+        builder.add("wathe.midnightconfig.chatHistoryLimit", "Chat History Limit");
+        builder.add("wathe.midnightconfig.chatHistoryLimit.tooltip", "Controls how many chat messages can be scrolled back through.\nHigher values use more memory and may make chat scrolling less smooth.");
 
         builder.add("wathe.argument.game_mode.invalid", "Game mode could not be found");
         builder.add("wathe.argument.map_effect.invalid", "Map effect could not be found");

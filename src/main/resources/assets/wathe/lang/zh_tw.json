@@ -398,6 +398,8 @@
   "wathe.midnightconfig.snowOptLevel.tooltip": "雪花粒子碰撞的渲染優化方式。\n\n“碰撞優化”可能並不適用於所有地圖。",
   "wathe.midnightconfig.snowflakeChance": "雪花粒子數量 (%)",
   "wathe.midnightconfig.snowflakeChance.tooltip": "控制雪花粒子生成的機率。\n0 為關閉，100 為最大。",
+  "wathe.midnightconfig.chatHistoryLimit": "聊天記錄上限",
+  "wathe.midnightconfig.chatHistoryLimit.tooltip": "控制可回看聊天訊息的條數。\n數值越高，占用的記憶體越多，捲動聊天記錄時也可能更不流暢。",
 
   "tip.note": "我應該先寫點什麼",
   "death_reason.wathe.generic": "未知",
