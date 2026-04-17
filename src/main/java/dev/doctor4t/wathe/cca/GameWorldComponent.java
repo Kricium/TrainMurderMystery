@@ -5,6 +5,7 @@ import dev.doctor4t.wathe.api.*;
 import dev.doctor4t.wathe.compat.TrainVoicePlugin;
 import dev.doctor4t.wathe.game.GameConstants;
 import dev.doctor4t.wathe.game.GameFunctions;
+import dev.doctor4t.wathe.game.MapResetTask;
 import com.mojang.authlib.GameProfile;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.*;
@@ -93,6 +94,12 @@ public class GameWorldComponent implements AutoSyncedComponent, ServerTickingCom
     }
 
     private int ticksUntilNextResetAttempt = -1;
+
+    // 渐进式地图重置相关字段
+    /** 是否启用渐进式重置（true = 分块渐进，false = 原始一次性重置） */
+    private boolean gradualResetEnabled = true;
+    /** 当前正在执行的渐进式重置任务，null 表示没有在执行 */
+    private MapResetTask activeResetTask = null;
 
     private int psychosActive = 0;
 
@@ -363,8 +370,47 @@ public class GameWorldComponent implements AutoSyncedComponent, ServerTickingCom
         return this.gameProfiles;
     }
 
+    /**
+     * 排队一次性地图重置（原始模式）。
+     * 渐进式重置通过 {@link #startGradualReset(MapResetTask)} 启动，不经过此方法。
+     */
     public void queueMapReset() {
         ticksUntilNextResetAttempt = 10;
+    }
+
+    // ── 渐进式重置开关 ──────────────────────────────────────────────────
+
+    /**
+     * @return 是否启用渐进式地图重置
+     */
+    public boolean isGradualResetEnabled() {
+        return gradualResetEnabled;
+    }
+
+    /**
+     * 设置是否启用渐进式地图重置
+     *
+     * @param enabled true = 分块渐进重置，false = 原始一次性重置
+     */
+    public void setGradualResetEnabled(boolean enabled) {
+        this.gradualResetEnabled = enabled;
+        this.sync();
+    }
+
+    /**
+     * @return 当前是否正在执行渐进式地图重置
+     */
+    public boolean isGradualResetInProgress() {
+        return activeResetTask != null && !activeResetTask.isFinished();
+    }
+
+    /**
+     * 启动渐进式重置任务（由 GameFunctions.initializeGame 调用）
+     *
+     * @param task 预构建好的渐进式重置任务（包含完成回调）
+     */
+    public void startGradualReset(MapResetTask task) {
+        this.activeResetTask = task;
     }
 
     public int getPsychosActive() {
@@ -509,6 +555,11 @@ public class GameWorldComponent implements AutoSyncedComponent, ServerTickingCom
         this.vigilanteDividend = nbtCompound.getInt("VigilanteDividend") > 0 ? nbtCompound.getInt("VigilanteDividend") : 6;
         this.neutralDividend = nbtCompound.getInt("NeutralDividend") > 0 ? nbtCompound.getInt("NeutralDividend") : 6;
 
+        // 渐进式重置开关（默认 true）
+        if (nbtCompound.contains("GradualResetEnabled")) {
+            this.gradualResetEnabled = nbtCompound.getBoolean("GradualResetEnabled");
+        }
+
         for (Role role : WatheRoles.ROLES) {
             this.setRoles(uuidListFromNbt(nbtCompound, role.identifier().toString()), role);
         }
@@ -604,6 +655,9 @@ public class GameWorldComponent implements AutoSyncedComponent, ServerTickingCom
         nbtCompound.putInt("VigilanteDividend", vigilanteDividend);
         nbtCompound.putInt("NeutralDividend", neutralDividend);
 
+        // 渐进式重置开关
+        nbtCompound.putBoolean("GradualResetEnabled", gradualResetEnabled);
+
         for (Role role : WatheRoles.ROLES) {
             nbtCompound.put(role.identifier().toString(), nbtFromUuidList(getAllWithRole(role)));
         }
@@ -689,7 +743,15 @@ public class GameWorldComponent implements AutoSyncedComponent, ServerTickingCom
         MapVariablesWorldComponent areas = MapVariablesWorldComponent.KEY.get(serverWorld);
         Box playArea = areas.getPlayArea();
 
-        // attempt to reset the play area
+        // 渐进式重置：每 tick 处理一个分块
+        if (activeResetTask != null && !activeResetTask.isFinished()) {
+            if (activeResetTask.tick()) {
+                // 重置完成，清理任务引用
+                activeResetTask = null;
+            }
+        }
+
+        // 原始一次性重置（仅在未启用渐进式重置时使用）
         if (--ticksUntilNextResetAttempt == 0) {
             if (GameFunctions.tryResetTrain(serverWorld)) {
                 queueMapReset();

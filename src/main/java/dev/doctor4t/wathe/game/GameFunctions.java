@@ -105,6 +105,13 @@ public class GameFunctions {
         }
     }
 
+    /**
+     * 开始游戏。
+     * <p>
+     * 当启用渐进式地图重置时，会先执行渐进重置（玩家在大厅等待，ActionBar 显示进度），
+     * 重置完成后再进入 STARTING 状态（黑屏 → 传送 → 亮屏）。
+     * 当禁用渐进式重置时，立即进入 STARTING 状态（原始行为）。
+     */
     public static void startGame(ServerWorld world, GameMode gameMode, MapEffect mapEffect, int time) {
         MapVotingComponent votingComponent = MapVotingComponent.KEY.get(world.getServer().getScoreboard());
         if (votingComponent.isVotingActive()) {
@@ -122,7 +129,21 @@ public class GameFunctions {
         GameTimeComponent.KEY.get(world).setResetTime(time);
 
         if (playerCount >= gameMode.minPlayerCount) {
-            game.setGameStatus(GameWorldComponent.GameStatus.STARTING);
+            if (game.isGradualResetEnabled()) {
+                // 渐进式重置：先重置地图，完成后再进入 STARTING 黑屏转场
+                // 防止重复触发
+                if (game.isGradualResetInProgress()) {
+                    return;
+                }
+                MapResetTask task = new MapResetTask(world, () -> {
+                    // 地图重置完成，正式进入 STARTING（黑屏 → 传送 → 亮屏）
+                    game.setGameStatus(GameWorldComponent.GameStatus.STARTING);
+                });
+                game.startGradualReset(task);
+            } else {
+                // 原始行为：直接进入 STARTING
+                game.setGameStatus(GameWorldComponent.GameStatus.STARTING);
+            }
         } else {
             for (ServerPlayerEntity player : world.getPlayers()) {
                 player.sendMessage(Text.translatable("game.start_error.not_enough_players", gameMode.minPlayerCount), true);
@@ -135,6 +156,12 @@ public class GameFunctions {
         component.setGameStatus(GameWorldComponent.GameStatus.STOPPING);
     }
 
+    /**
+     * 游戏初始化入口。恢复为原始逻辑，不修改游戏状态机。
+     * <p>
+     * 当启用渐进式重置时，地图重置已在 STARTING 之前完成（由 startGame 触发），
+     * 此处通过 {@code skipMapReset} 标志跳过 {@code queueMapReset()} 调用，避免重复重置。
+     */
     public static void initializeGame(ServerWorld serverWorld) {
         GameWorldComponent gameComponent = GameWorldComponent.KEY.get(serverWorld);
         List<ServerPlayerEntity> readyPlayerList = getReadyPlayerList(serverWorld);
@@ -214,8 +241,10 @@ public class GameFunctions {
         gameComponent.clearPreventGunPickup(); // 清空射杀无辜惩罚列表
         GameTimeComponent.KEY.get(serverWorld).reset();
 
-        // reset map
-        gameComponent.queueMapReset();
+        // reset map —— 渐进式重置已在 STARTING 之前完成，跳过二次重置
+        if (!gameComponent.isGradualResetEnabled()) {
+            gameComponent.queueMapReset();
+        }
 
         // select rooms and give keys
         Random random = new Random();

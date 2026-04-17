@@ -106,6 +106,7 @@ public class Wathe implements ModInitializer {
             SetTimerCommand.register(dispatcher);
             SetMoneyCommand.register(dispatcher);
             MapVoteCommand.register(dispatcher);
+            SetGradualResetCommand.register(dispatcher);
         }));
 
         // 版本检查 - 在配置阶段验证客户端 mod 版本

@@ -491,5 +491,9 @@
   "wathe.midnightconfig.snowflakeChance.tooltip": "Controls the spawn chance of snowflake particles.\n0 = Off, 100 = Maximum.",
   "wathe.midnightconfig.title": "The Harpy Express - Final Voyage - Config",
   "wathe.midnightconfig.ultraPerfMode": "Ultra Performance Mode",
-  "wathe.midnightconfig.ultraPerfMode.tooltip": "Disables scenery for a worse visual experience but maximum performance. Lowers render distance to 2."
+  "wathe.midnightconfig.ultraPerfMode.tooltip": "Disables scenery for a worse visual experience but maximum performance. Lowers render distance to 2.",
+
+  "message.wathe.resetting": "Resetting map %s%%",
+  "commands.wathe.gradualreset.set": "Gradual map reset set to: %s",
+  "commands.wathe.gradualreset.query": "Gradual map reset is currently: %s"
 }
