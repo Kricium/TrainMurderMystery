@@ -708,7 +708,7 @@ public class GameFunctions {
         BlockPos trainMaxPos = trainMinPos.add(backupTrainBox.getDimensions());
         BlockBox trainBox = BlockBox.create(trainMinPos, trainMaxPos);
 
-        if (serverWorld.isRegionLoaded(backupMinPos, backupMaxPos) && serverWorld.isRegionLoaded(trainMinPos, trainMaxPos)) {
+        if (isRegionChunkLoaded(serverWorld, backupMinPos, backupMaxPos) && isRegionChunkLoaded(serverWorld, trainMinPos, trainMaxPos)) {
             List<BlockInfo> list = Lists.newArrayList();
             List<BlockInfo> list2 = Lists.newArrayList();
             List<BlockInfo> list3 = Lists.newArrayList();
@@ -802,6 +802,24 @@ public class GameFunctions {
 
         Wathe.LOGGER.info("Train reset successful. Dimension: {}", dimensionId);
         return false;
+    }
+
+    private static boolean isRegionChunkLoaded(ServerWorld world, BlockPos minPos, BlockPos maxPos) {
+        int minChunkX = minPos.getX() >> 4;
+        int minChunkZ = minPos.getZ() >> 4;
+        int maxChunkX = maxPos.getX() >> 4;
+        int maxChunkZ = maxPos.getZ() >> 4;
+
+        for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
+            for (int chunkZ = minChunkZ; chunkZ <= maxChunkZ; chunkZ++) {
+                long chunkPos = net.minecraft.util.math.ChunkPos.toLong(chunkX, chunkZ);
+                if (!world.isChunkLoaded(chunkPos)) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     public static int getReadyPlayerCount(World world) {
