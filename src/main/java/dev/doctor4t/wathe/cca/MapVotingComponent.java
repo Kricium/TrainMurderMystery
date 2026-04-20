@@ -442,10 +442,28 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
         this.sync();
     }
 
+    public boolean skipWaitingPhase() {
+        if (!votingActive || server == null) {
+            return false;
+        }
+
+        if (roulettePhase) {
+            finishSelection();
+            return true;
+        }
+
+        endVoting(true);
+        return true;
+    }
+
     /**
      * 投票结束，执行加权随机选择
      */
     private void endVoting() {
+        endVoting(false);
+    }
+
+    private void endVoting(boolean ignoreMinPlayers) {
         if (server == null) return;
 
         int onlinePlayers = 0;
@@ -453,7 +471,7 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
             onlinePlayers += world.getPlayers().size();
         }
 
-        if (onlinePlayers < MIN_PLAYERS_FOR_VOTING) {
+        if (!ignoreMinPlayers && onlinePlayers < MIN_PLAYERS_FOR_VOTING) {
             // Not enough players to complete a vote yet, reset timer and wait
             this.votingTicksRemaining = VOTING_DURATION_TICKS;
             Wathe.LOGGER.info("Not enough players ({}/{}) for voting result, resetting timer",

@@ -446,6 +446,8 @@
   "commands.wathe.gamesettings.shootinnocentpunishment.success": "已将误杀惩罚设置为：%s",
   "commands.wathe.gamesettings.shootinnocentpunishment.preventgunpickup": "掉落并阻止拾取枪",
   "commands.wathe.gamesettings.shootinnocentpunishment.killshooter": "击杀开枪者并阻止拾取枪",
+  "commands.wathe.skipvotewait.no_active": "当前没有进行中的投票等待可跳过",
+  "commands.wathe.skipvotewait.success": "已跳过当前投票等待阶段",
 
   "shop.error.not_available": "商店暂不可用",
   "shop.error.invalid_item": "无效的商品",
