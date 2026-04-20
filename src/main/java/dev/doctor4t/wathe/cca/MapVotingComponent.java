@@ -67,7 +67,10 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
     private static final int VOTING_DURATION_TICKS = 30 * 20; // 30 seconds
     private static final int ROULETTE_DURATION_TICKS = 8 * 20; // 8 seconds (5s scroll + 3s stop)
     private static final int ALL_VOTED_REMAINING_TICKS = 5 * 20; // 5 seconds after all voted
-    private static final int MIN_PLAYERS_FOR_GAME = 6;
+    private static final int MIN_PLAYERS_FOR_VOTING = 2;
+    private static final Identifier RANDOM_MODE_OPTION_ID = Wathe.id("random_mode");
+    private static final Identifier RANDOM_MAP_OPTION_ID = Wathe.id("random_map");
+    private static final Identifier MURDER_DEFAULT_MAP_ID = Wathe.id("default");
 
     public record VotingModeEntry(
         Identifier gameModeId,
@@ -292,24 +295,25 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
                 continue;
             }
 
-            List<MapRegistryEntry> eligibleMaps = MapRegistry.getInstance().getEligibleMapsForGameMode(mode.identifier, playerCount);
-            if (!eligibleMaps.isEmpty()) {
-                this.availableModes.add(new VotingModeEntry(
-                    mode.identifier,
-                    net.minecraft.text.Text.translatable("gamemode." + mode.identifier.getNamespace() + "." + mode.identifier.getPath()).getString(),
-                    net.minecraft.text.Text.translatable(
-                        "gui.wathe.mode_voting.description." + mode.identifier.getNamespace() + "." + mode.identifier.getPath()
-                    ).getString(),
-                    mode.minPlayerCount,
-                    false
-                ));
-            } else {
-                this.unavailableModes.add(new UnavailableModeEntry(
-                    mode.identifier,
-                    net.minecraft.text.Text.translatable("gamemode." + mode.identifier.getNamespace() + "." + mode.identifier.getPath()).getString(),
-                    "no_maps_for_player_count"
-                ));
-            }
+            this.availableModes.add(new VotingModeEntry(
+                mode.identifier,
+                net.minecraft.text.Text.translatable("gamemode." + mode.identifier.getNamespace() + "." + mode.identifier.getPath()).getString(),
+                net.minecraft.text.Text.translatable(
+                    "gui.wathe.mode_voting.description." + mode.identifier.getNamespace() + "." + mode.identifier.getPath()
+                ).getString(),
+                mode.minPlayerCount,
+                false
+            ));
+        }
+
+        if (this.availableModes.size() > 1) {
+            this.availableModes.add(0, new VotingModeEntry(
+                RANDOM_MODE_OPTION_ID,
+                net.minecraft.text.Text.translatable("gui.wathe.mode_voting.random_mode").getString(),
+                net.minecraft.text.Text.translatable("gui.wathe.mode_voting.random_mode.description").getString(),
+                0,
+                false
+            ));
         }
     }
 
@@ -325,29 +329,27 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
 
         List<MapRegistryEntry> allModeMaps = MapRegistry.getInstance().getMapsForGameMode(gameModeId);
         for (MapRegistryEntry mapEntry : allModeMaps) {
-            if (mapEntry.isEligible(playerCount)) {
-                this.availableMaps.add(new VotingMapEntry(
-                    mapEntry.id(),
-                    mapEntry.dimensionId(),
-                    gameModeId,
-                    mapEntry.displayName(),
-                    mapEntry.description().orElse(""),
-                    mapEntry.minPlayers(),
-                    mapEntry.maxPlayers()
-                ));
-            } else {
-                String reason;
-                if (playerCount < mapEntry.minPlayers()) {
-                    reason = "min_players:" + mapEntry.minPlayers();
-                } else {
-                    reason = "max_players:" + mapEntry.maxPlayers();
-                }
-                this.unavailableMaps.add(new UnavailableMapEntry(
-                    mapEntry.dimensionId(),
-                    mapEntry.displayName(),
-                    reason
-                ));
-            }
+            this.availableMaps.add(new VotingMapEntry(
+                mapEntry.id(),
+                mapEntry.dimensionId(),
+                gameModeId,
+                mapEntry.displayName(),
+                mapEntry.description().orElse(""),
+                mapEntry.minPlayers(),
+                mapEntry.maxPlayers()
+            ));
+        }
+
+        if (getRandomizableMapIndices(gameModeId).size() > 1) {
+            this.availableMaps.add(0, new VotingMapEntry(
+                RANDOM_MAP_OPTION_ID,
+                RANDOM_MAP_OPTION_ID,
+                gameModeId,
+                net.minecraft.text.Text.translatable("gui.wathe.map_voting.random_map").getString(),
+                net.minecraft.text.Text.translatable("gui.wathe.map_voting.random_map.description").getString(),
+                0,
+                0
+            ));
         }
 
         this.voteCounts = new int[this.availableMaps.size()];
@@ -451,14 +453,16 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
             onlinePlayers += world.getPlayers().size();
         }
 
-        if (onlinePlayers < MIN_PLAYERS_FOR_GAME) {
-            // Not enough players, reset timer and wait
+        if (onlinePlayers < MIN_PLAYERS_FOR_VOTING) {
+            // Not enough players to complete a vote yet, reset timer and wait
             this.votingTicksRemaining = VOTING_DURATION_TICKS;
             Wathe.LOGGER.info("Not enough players ({}/{}) for voting result, resetting timer",
-                onlinePlayers, MIN_PLAYERS_FOR_GAME);
+                onlinePlayers, MIN_PLAYERS_FOR_VOTING);
             this.sync();
             return;
         }
+
+        applyDefaultVotesToRandomForUnvotedPlayers();
 
         int optionCount = votingStage == VotingStage.MODE ? availableModes.size() : availableMaps.size();
         int selectedIndex = selectOptionWeighted(optionCount);
@@ -467,8 +471,15 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
                 reset();
                 return;
             }
-            this.selectedModeIndex = selectedIndex;
             Identifier selectedGameModeId = availableModes.get(selectedIndex).gameModeId();
+            if (RANDOM_MODE_OPTION_ID.equals(selectedGameModeId)) {
+                selectedGameModeId = selectRandomModeFromCurrentChoices();
+                if (selectedGameModeId == null) {
+                    reset();
+                    return;
+                }
+            }
+            this.selectedModeIndex = indexOfMode(selectedGameModeId);
             int playerCount = 0;
             for (ServerWorld world : server.getWorlds()) {
                 playerCount += world.getPlayers().size();
@@ -477,6 +488,18 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
             return;
         }
 
+        if (selectedIndex < 0 || selectedIndex >= availableMaps.size()) {
+            reset();
+            return;
+        }
+        VotingMapEntry selectedEntry = availableMaps.get(selectedIndex);
+        if (RANDOM_MAP_OPTION_ID.equals(selectedEntry.mapId())) {
+            selectedIndex = selectRandomMapIndexForCurrentChoices(selectedEntry.gameModeId());
+            if (selectedIndex < 0 || selectedIndex >= availableMaps.size()) {
+                reset();
+                return;
+            }
+        }
         this.selectedMapIndex = selectedIndex;
         this.roulettePhase = true;
         this.rouletteTicksRemaining = ROULETTE_DURATION_TICKS;
@@ -505,6 +528,13 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
             if (c > 0) { hasAnyVotes = true; break; }
         }
 
+        if (!hasAnyVotes) {
+            int randomOptionIndex = getRandomOptionIndexForCurrentStage();
+            if (randomOptionIndex >= 0) {
+                return randomOptionIndex;
+            }
+        }
+
         for (int i = 0; i < optionCount; i++) {
             // 无人投票：所有选项等概率；有人投票：只有获得票数的选项有概率
             weights[i] = hasAnyVotes ? voteCounts[i] : 1;
@@ -525,6 +555,81 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
         }
 
         return 0; // fallback
+    }
+
+    private void applyDefaultVotesToRandomForUnvotedPlayers() {
+        if (server == null || roulettePhase || !votingActive) {
+            return;
+        }
+
+        int randomOptionIndex = getRandomOptionIndexForCurrentStage();
+        if (randomOptionIndex < 0 || randomOptionIndex >= voteCounts.length) {
+            return;
+        }
+
+        for (ServerWorld world : server.getWorlds()) {
+            for (var player : world.getPlayers()) {
+                UUID playerId = player.getUuid();
+                if (playerVotes.containsKey(playerId)) {
+                    continue;
+                }
+                playerVotes.put(playerId, randomOptionIndex);
+                voteCounts[randomOptionIndex]++;
+            }
+        }
+    }
+
+    private int getRandomOptionIndexForCurrentStage() {
+        if (votingStage == VotingStage.MODE) {
+            return indexOfMode(RANDOM_MODE_OPTION_ID);
+        }
+
+        for (int i = 0; i < availableMaps.size(); i++) {
+            if (RANDOM_MAP_OPTION_ID.equals(availableMaps.get(i).mapId())) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    @Nullable
+    private Identifier selectRandomModeFromCurrentChoices() {
+        List<Identifier> candidates = new ArrayList<>();
+        for (VotingModeEntry entry : availableModes) {
+            if (!RANDOM_MODE_OPTION_ID.equals(entry.gameModeId())) {
+                candidates.add(entry.gameModeId());
+            }
+        }
+        if (candidates.isEmpty()) {
+            return null;
+        }
+        return candidates.get(new Random().nextInt(candidates.size()));
+    }
+
+    private int selectRandomMapIndexForCurrentChoices(Identifier gameModeId) {
+        List<Integer> candidates = getRandomizableMapIndices(gameModeId);
+        if (candidates.isEmpty()) {
+            return -1;
+        }
+        return candidates.get(new Random().nextInt(candidates.size()));
+    }
+
+    private List<Integer> getRandomizableMapIndices(Identifier gameModeId) {
+        List<Integer> candidates = new ArrayList<>();
+        for (int i = 0; i < availableMaps.size(); i++) {
+            VotingMapEntry entry = availableMaps.get(i);
+            if (RANDOM_MAP_OPTION_ID.equals(entry.mapId())) {
+                continue;
+            }
+            if (!entry.gameModeId().equals(gameModeId)) {
+                continue;
+            }
+            if (WatheGameModes.MURDER_ID.equals(gameModeId) && MURDER_DEFAULT_MAP_ID.equals(entry.mapId())) {
+                continue;
+            }
+            candidates.add(i);
+        }
+        return candidates;
     }
 
     /**
@@ -607,7 +712,7 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
             for (ServerWorld world : server.getWorlds()) {
                 onlinePlayers += world.getPlayers().size();
             }
-            if (onlinePlayers >= MIN_PLAYERS_FOR_GAME && votingTicksRemaining <= 0) {
+            if (onlinePlayers >= MIN_PLAYERS_FOR_VOTING && votingTicksRemaining <= 0) {
                 votingTicksRemaining = VOTING_DURATION_TICKS;
                 this.sync();
             }

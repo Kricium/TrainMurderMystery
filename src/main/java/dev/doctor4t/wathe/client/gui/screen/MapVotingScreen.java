@@ -490,7 +490,7 @@ public class MapVotingScreen extends Screen {
 
         if (available) {
             // 人数
-            Text players = Text.translatable("gui.wathe.map_voting.player_range", map.minPlayers(), map.maxPlayers());
+            Text players = Text.translatable("gui.wathe.map_voting.player_recommendation", map.minPlayers(), map.maxPlayers());
             drawCenteredText(context, players, x + cw / 2, y + 30, TEXT_DIM);
 
             // 投票条（固定在底部）
