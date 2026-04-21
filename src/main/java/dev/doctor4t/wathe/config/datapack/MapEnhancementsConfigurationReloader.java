@@ -207,18 +207,20 @@ public class MapEnhancementsConfigurationReloader implements SimpleSynchronousRe
     }
 
     private Set<Identifier> extractGameModes(JsonObject object, Set<Identifier> fallback) {
+        if (!object.has("game_modes")) {
+            return new LinkedHashSet<>(fallback);
+        }
+        if (!object.get("game_modes").isJsonArray()) {
+            return new LinkedHashSet<>(fallback);
+        }
+
         LinkedHashSet<Identifier> result = new LinkedHashSet<>();
-        if (object.has("game_modes") && object.get("game_modes").isJsonArray()) {
-            object.getAsJsonArray("game_modes").forEach(element -> {
-                Identifier id = Identifier.tryParse(element.getAsString());
-                if (id != null) {
-                    result.add(id);
-                }
-            });
-        }
-        if (result.isEmpty()) {
-            result.addAll(fallback);
-        }
+        object.getAsJsonArray("game_modes").forEach(element -> {
+            Identifier id = Identifier.tryParse(element.getAsString());
+            if (id != null) {
+                result.add(id);
+            }
+        });
         return result;
     }
 }
