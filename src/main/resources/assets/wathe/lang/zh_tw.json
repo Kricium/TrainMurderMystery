@@ -268,7 +268,7 @@
   "container.cabinet": "櫃子",
   "container.cargo_box": "貨箱",
   
-  "credits.wathe.thank_you": "感謝你遊玩《哈比快車-最後航程》！\n我和我的團隊花了很多時間製作這個模組，希望你喜歡它。\n如果你喜歡並且想要製作視頻或直播，\n請務必在視頻和模組頁面中標註我的頻道！\n - RAT / doctor4t \n Spark 改版 V @mod_version@ ｜ QQ交流群: 1043700021 ",
+  "credits.wathe.thank_you": "感謝你遊玩《哈比快車-最後航程》！\n我和我的團隊花了很多時間製作這個模組，希望你喜歡它。\n如果你喜歡並且想要製作視頻或直播，\n請務必在視頻和模組頁面中標註我的頻道！\n - RAT / doctor4t \n Mayoi 改版 V @mod_version@ ｜ QQ交流群: 1043700021 ",
   "entity.wathe.firecracker": "爆竹",
   "entity.wathe.grenade": "手雷",
   "entity.wathe.note": "便條",
@@ -443,6 +443,8 @@
   "commands.wathe.gamesettings.shootinnocentpunishment.success": "已將誤殺懲罰設置為：%s",
   "commands.wathe.gamesettings.shootinnocentpunishment.preventgunpickup": "掉落並阻止拾取槍",
   "commands.wathe.gamesettings.shootinnocentpunishment.killshooter": "擊殺開槍者並阻止拾取槍",
+  "commands.wathe.skipvotewait.no_active": "目前沒有進行中的投票等待可跳過",
+  "commands.wathe.skipvotewait.success": "已跳過目前投票等待階段",
 
   "shop.error.not_available": "商店暫不可用",
   "shop.error.invalid_item": "無效的商品",

@@ -4,6 +4,7 @@ import com.google.common.collect.Lists;
 import dev.doctor4t.wathe.Wathe;
 import dev.doctor4t.wathe.api.GameMode;
 import dev.doctor4t.wathe.api.MapEffect;
+import dev.doctor4t.wathe.api.WatheGameModes;
 import dev.doctor4t.wathe.api.event.GameEvents;
 import dev.doctor4t.wathe.api.Role;
 import dev.doctor4t.wathe.api.WatheRoles;
@@ -502,7 +503,7 @@ public class GameFunctions {
         if (MapRegistry.getInstance().getMapCount() > 0) {
             MapVotingComponent voting = MapVotingComponent.KEY.get(
                 world.getServer().getScoreboard());
-            voting.startVoting();
+            voting.startModeVoting();
         }
     }
 
@@ -708,7 +709,7 @@ public class GameFunctions {
         BlockPos trainMaxPos = trainMinPos.add(backupTrainBox.getDimensions());
         BlockBox trainBox = BlockBox.create(trainMinPos, trainMaxPos);
 
-        if (serverWorld.isRegionLoaded(backupMinPos, backupMaxPos) && serverWorld.isRegionLoaded(trainMinPos, trainMaxPos)) {
+        if (isRegionChunkLoaded(serverWorld, backupMinPos, backupMaxPos) && isRegionChunkLoaded(serverWorld, trainMinPos, trainMaxPos)) {
             List<BlockInfo> list = Lists.newArrayList();
             List<BlockInfo> list2 = Lists.newArrayList();
             List<BlockInfo> list3 = Lists.newArrayList();
@@ -802,6 +803,24 @@ public class GameFunctions {
 
         Wathe.LOGGER.info("Train reset successful. Dimension: {}", dimensionId);
         return false;
+    }
+
+    private static boolean isRegionChunkLoaded(ServerWorld world, BlockPos minPos, BlockPos maxPos) {
+        int minChunkX = minPos.getX() >> 4;
+        int minChunkZ = minPos.getZ() >> 4;
+        int maxChunkX = maxPos.getX() >> 4;
+        int maxChunkZ = maxPos.getZ() >> 4;
+
+        for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
+            for (int chunkZ = minChunkZ; chunkZ <= maxChunkZ; chunkZ++) {
+                long chunkPos = net.minecraft.util.math.ChunkPos.toLong(chunkX, chunkZ);
+                if (!world.isChunkLoaded(chunkPos)) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     public static int getReadyPlayerCount(World world) {
@@ -913,6 +932,11 @@ public class GameFunctions {
      * 投票结束后传送所有玩家到目标维度
      */
     public static void finalizeVoting(ServerWorld currentWorld, Identifier targetDimensionId) {
+        Identifier gameModeId = MapVotingComponent.KEY.get(currentWorld.getServer().getScoreboard()).getLastSelectedGameMode();
+        finalizeVoting(currentWorld, gameModeId != null ? gameModeId : WatheGameModes.MURDER_ID, targetDimensionId);
+    }
+
+    public static void finalizeVoting(ServerWorld currentWorld, Identifier targetGameModeId, Identifier targetDimensionId) {
         RegistryKey<World> dimKey = RegistryKey.of(RegistryKeys.WORLD, targetDimensionId);
         ServerWorld targetWorld = currentWorld.getServer().getWorld(dimKey);
 
@@ -920,6 +944,9 @@ public class GameFunctions {
             Wathe.LOGGER.warn("Target dimension {} not found, staying in current world", targetDimensionId);
             return;
         }
+
+        GameMode targetGameMode = WatheGameModes.GAME_MODES.getOrDefault(targetGameModeId, WatheGameModes.MURDER);
+        GameWorldComponent.KEY.get(targetWorld).setGameMode(targetGameMode);
 
         // Teleport all players from all worlds to the target dimension
         for (ServerWorld world : currentWorld.getServer().getWorlds()) {
@@ -933,7 +960,7 @@ public class GameFunctions {
             }
         }
 
-        Wathe.LOGGER.info("Teleported all players to dimension {}", targetDimensionId);
+        Wathe.LOGGER.info("Teleported all players to dimension {} with game mode {}", targetDimensionId, targetGameModeId);
     }
 
     public enum WinStatus {

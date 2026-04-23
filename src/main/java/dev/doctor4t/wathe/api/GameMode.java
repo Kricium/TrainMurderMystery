@@ -14,6 +14,7 @@ public abstract class GameMode {
     public final Identifier identifier;
     public final int defaultStartTime;
     public final int minPlayerCount;
+    public final boolean hasPlayerLimitDisplay;
 
     /**
      * @param identifier the game mode identifier
@@ -21,9 +22,14 @@ public abstract class GameMode {
      * @param minPlayerCount the minimum amount of players required to start the game mode
      */
     public GameMode(Identifier identifier, int defaultStartTime, int minPlayerCount) {
+        this(identifier, defaultStartTime, minPlayerCount, true);
+    }
+
+    public GameMode(Identifier identifier, int defaultStartTime, int minPlayerCount, boolean hasPlayerLimitDisplay) {
         this.identifier = identifier;
         this.defaultStartTime = defaultStartTime;
         this.minPlayerCount = minPlayerCount;
+        this.hasPlayerLimitDisplay = hasPlayerLimitDisplay;
     }
 
     public void tickCommonGameLoop() {}

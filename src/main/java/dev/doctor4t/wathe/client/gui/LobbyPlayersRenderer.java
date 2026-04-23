@@ -61,7 +61,7 @@ public class LobbyPlayersRenderer {
                     context.getMatrices().pop();
 
                     // 投票状态文字
-                    MutableText votingText = Text.translatable("lobby.voting.active");
+                    MutableText votingText = Text.translatable(votingComp.isModeVoting() ? "lobby.voting.mode_active" : "lobby.voting.active");
                     context.drawTextWithShadow(renderer, votingText,
                         -renderer.getWidth(votingText) / 2, 16, 0xFFC5A244);
 

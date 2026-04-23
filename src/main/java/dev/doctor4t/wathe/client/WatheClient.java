@@ -64,6 +64,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.registry.Registries;
 import net.minecraft.sound.SoundCategory;
+import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
@@ -92,6 +93,7 @@ public class WatheClient implements ClientModInitializer {
     // 投票界面自动打开标记：游戏结束时自动打开一次
     private static boolean hasAutoOpenedVotingScreen = false;
     private static boolean wasVotingActive = false;
+    private static boolean hasForcedOpenForUnvoted = false;
 
     // 方块黑名单 debug 开关
     public static boolean blockBlacklistDebugEnabled = false;
@@ -322,10 +324,13 @@ public class WatheClient implements ClientModInitializer {
                 MapVotingComponent.KEY.get(clientWorld.getScoreboard());
             boolean votingActive = votingComp.isVotingActive();
             boolean roulettePhase = votingActive && votingComp.isRoulettePhase();
+            int votingTicksRemaining = votingComp.getVotingTicksRemaining();
+            boolean playerHasVoted = player != null && votingComp.getVotedMapIndex(player.getUuid()) >= 0;
 
             // 投票刚开始时重置自动打开标记
             if (votingActive && !wasVotingActive) {
                 hasAutoOpenedVotingScreen = false;
+                hasForcedOpenForUnvoted = false;
             }
             // 等待结算动画播放完毕后再自动打开一次投票界面
             if (votingActive && !hasAutoOpenedVotingScreen && !RoundTextRenderer.isEndAnimationPlaying()) {
@@ -353,6 +358,18 @@ public class WatheClient implements ClientModInitializer {
                 }
             }
 
+            // 最后 10 秒仍未投票时，强制打开一次投票界面提醒
+            if (votingActive && !roulettePhase && !hasForcedOpenForUnvoted && votingTicksRemaining <= 10 * 20 && !playerHasVoted) {
+                if (!(mc.currentScreen instanceof MapVotingScreen)) {
+                    RoundTextRenderer.clearEndAnimation();
+                    mc.setScreen(new MapVotingScreen());
+                }
+                if (mc.inGameHud != null) {
+                    mc.inGameHud.setOverlayMessage(Text.translatable("gui.wathe.voting.unvoted_warning"), false);
+                }
+                hasForcedOpenForUnvoted = true;
+            }
+
             // 轮盘阶段强制保持投票界面开启
             if (roulettePhase && !(mc.currentScreen instanceof MapVotingScreen)) {
                 RoundTextRenderer.clearEndAnimation();
@@ -363,6 +380,9 @@ public class WatheClient implements ClientModInitializer {
             // 投票结束时关闭投票界面
             if (!votingActive && mc.currentScreen instanceof MapVotingScreen) {
                 mc.setScreen(null);
+            }
+            if (!votingActive) {
+                hasForcedOpenForUnvoted = false;
             }
             wasVotingActive = votingActive;
         });

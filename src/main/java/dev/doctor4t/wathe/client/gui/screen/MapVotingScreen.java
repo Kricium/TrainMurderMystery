@@ -1,7 +1,9 @@
 package dev.doctor4t.wathe.client.gui.screen;
 
 import dev.doctor4t.wathe.cca.MapVotingComponent;
+import dev.doctor4t.wathe.cca.MapVotingComponent.UnavailableModeEntry;
 import dev.doctor4t.wathe.cca.MapVotingComponent.UnavailableMapEntry;
+import dev.doctor4t.wathe.cca.MapVotingComponent.VotingModeEntry;
 import dev.doctor4t.wathe.cca.MapVotingComponent.VotingMapEntry;
 import dev.doctor4t.wathe.util.MapVotePayload;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -12,6 +14,7 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.StringVisitable;
 import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 
 import java.util.List;
@@ -21,6 +24,7 @@ import java.util.Random;
  * 地图投票界面 - 东方快车风格优化版
  */
 public class MapVotingScreen extends Screen {
+    private static final Identifier RANDOM_MAP_OPTION_ID = Identifier.of("wathe", "random_map");
 
     // --- 风格配色方案 (列车谋杀案风格) ---
     // 背景：深色红木/皮革
@@ -167,11 +171,15 @@ public class MapVotingScreen extends Screen {
         MapVotingComponent voting = getVoting();
         if (voting != null && voting.isRoulettePhase()) {
             if (!rouletteStripInitialized) {
-                initRouletteStrip(voting.getSelectedMapIndex(), voting.getAvailableMaps().size());
-                rouletteStripInitialized = true;
-                rouletteResultSoundPlayed = false;
-                lastRouletteTickIndex = -1;
-                rouletteAnimTick = 0;
+                List<VotingMapEntry> rouletteMaps = getRouletteMaps(voting);
+                int rouletteSelectedIndex = getRouletteSelectedMapIndex(voting, rouletteMaps);
+                if (!rouletteMaps.isEmpty() && rouletteSelectedIndex >= 0) {
+                    initRouletteStrip(rouletteSelectedIndex, rouletteMaps.size());
+                    rouletteStripInitialized = true;
+                    rouletteResultSoundPlayed = false;
+                    lastRouletteTickIndex = -1;
+                    rouletteAnimTick = 0;
+                }
             }
             rouletteAnimTick++;
         } else {
@@ -229,7 +237,7 @@ public class MapVotingScreen extends Screen {
 
         if (voting.isRoulettePhase()) {
             // 轮盘阶段
-            renderRouletteStrip(context, maps, delta, yOffset);
+            renderRouletteStrip(context, getRouletteMaps(voting), delta, yOffset);
 
             // 标题
             Text title = Text.translatable("gui.wathe.map_voting.selecting");
@@ -239,14 +247,25 @@ public class MapVotingScreen extends Screen {
             renderVotingCards(context, voting, maps, mouseX, mouseY, yOffset);
 
             // 标题
-            Text title = Text.translatable("gui.wathe.map_voting.title");
+            Text title = voting.isModeVoting()
+                ? Text.translatable("gui.wathe.mode_voting.title")
+                : Text.translatable("gui.wathe.map_voting.title");
             drawTitle(context, title, 16 - yOffset, 1.2f);
+
+            if (!voting.isModeVoting() && voting.getLastSelectedGameMode() != null) {
+                Identifier gameModeId = voting.getLastSelectedGameMode();
+                Text currentModeText = Text.translatable(
+                    "gui.wathe.map_voting.selected_mode",
+                    Text.translatable("gamemode." + gameModeId.getNamespace() + "." + gameModeId.getPath())
+                );
+                drawCenteredText(context, currentModeText, this.width / 2, 32 - yOffset, BRASS_DIM);
+            }
 
             // 倒计时
             int ticksLeft = voting.getVotingTicksRemaining();
             String timeStr = String.format("%d", Math.max(0, ticksLeft / 20));
             int color = ticksLeft < 100 ? 0xFFFF5555 : BRASS_COLOR; // 最后5秒变红
-            drawCenteredText(context, timeStr, this.width / 2, 30 - yOffset, color);
+            drawCenteredText(context, timeStr, this.width / 2, 44 - yOffset, color);
         }
         super.render(context, mouseX, mouseY, delta);
     }
@@ -272,6 +291,11 @@ public class MapVotingScreen extends Screen {
 
     private void renderVotingCards(DrawContext context, MapVotingComponent voting,
                                    List<VotingMapEntry> maps, int mouseX, int mouseY, int yOffset) {
+        if (voting.isModeVoting()) {
+            renderModeVotingCards(context, voting, mouseX, mouseY, yOffset);
+            return;
+        }
+
         List<UnavailableMapEntry> unavailableMaps = voting.getUnavailableMaps();
         int[] voteCounts = voting.getVoteCounts();
 
@@ -326,7 +350,7 @@ public class MapVotingScreen extends Screen {
                 // 不可选地图
                 int unavailIdx = index - maps.size();
                 UnavailableMapEntry umap = unavailableMaps.get(unavailIdx);
-                drawTicketCard(context, x, y, new VotingMapEntry(umap.dimensionId(), umap.displayName(), "", 0, 0),
+                drawTicketCard(context, x, y, new VotingMapEntry(umap.dimensionId(), umap.dimensionId(), umap.dimensionId(), umap.displayName(), "", 0, 0),
                         false, false, false, 0, 0, 0f);
 
                 // 不可用原因覆盖层
@@ -339,6 +363,75 @@ public class MapVotingScreen extends Screen {
         }
 
         // 滚动指示器
+        if (maxScrollRow > 0) {
+            renderScrollIndicator(context, yOffset);
+        }
+    }
+
+    private void renderModeVotingCards(DrawContext context, MapVotingComponent voting, int mouseX, int mouseY, int yOffset) {
+        List<VotingModeEntry> modes = voting.getAvailableModes();
+        List<UnavailableModeEntry> unavailableModes = voting.getUnavailableModes();
+        int[] voteCounts = voting.getVoteCounts();
+
+        int totalCards = modes.size() + unavailableModes.size();
+        updateMaxScroll(totalCards);
+
+        int gridWidth = layoutCols * cardWidth + (layoutCols - 1) * cardGap;
+        int startX = (this.width - gridWidth) / 2;
+        int baseY = layoutTopY - yOffset;
+
+        int totalVotes = 0;
+        for (int c : voteCounts) totalVotes += c;
+        int myVote = (client.player != null) ? voting.getVotedMapIndex(client.player.getUuid()) : -1;
+
+        boolean hasAnyVotes = false;
+        for (int c : voteCounts) {
+            if (c > 0) {
+                hasAnyVotes = true;
+                break;
+            }
+        }
+        int totalWeight = 0;
+        int[] weights = new int[modes.size()];
+        for (int i = 0; i < modes.size(); i++) {
+            weights[i] = hasAnyVotes ? voteCounts[i] : 1;
+            totalWeight += weights[i];
+        }
+
+        int firstVisibleIndex = scrollRow * layoutCols;
+        int lastVisibleIndex = firstVisibleIndex + layoutRows * layoutCols;
+
+        for (int index = firstVisibleIndex; index < totalCards && index < lastVisibleIndex; index++) {
+            int visibleIndex = index - firstVisibleIndex;
+            int col = visibleIndex % layoutCols;
+            int row = visibleIndex / layoutCols;
+
+            int x = startX + col * (cardWidth + cardGap);
+            int y = baseY + row * (cardHeight + cardGap);
+
+            if (index < modes.size()) {
+                VotingModeEntry mode = modes.get(index);
+                boolean isHovered = mouseX >= x && mouseX <= x + cardWidth && mouseY >= y && mouseY <= y + cardHeight;
+                boolean isMyVote = (index == myVote);
+                int hoverOffset = isHovered ? -3 : 0;
+                float probability = totalWeight > 0 ? (float) weights[index] / totalWeight : 0f;
+
+                drawModeTicketCard(context, x, y + hoverOffset, mode, true, isMyVote, isHovered,
+                    index < voteCounts.length ? voteCounts[index] : 0, totalVotes, probability);
+            } else {
+                int unavailIdx = index - modes.size();
+                UnavailableModeEntry mode = unavailableModes.get(unavailIdx);
+                drawModeTicketCard(context, x, y, new VotingModeEntry(mode.gameModeId(), mode.displayName(), "", 0, false),
+                    false, false, false, 0, 0, 0f);
+
+                context.fill(x + 5, y + 5, x + cardWidth - 5, y + cardHeight - 5, 0xAA000000);
+                context.drawBorder(x + 5, y + 5, cardWidth - 10, cardHeight - 10, 0x55FFFFFF);
+
+                Text reasonText = parseUnavailableModeReason(mode.reason());
+                drawCenteredText(context, reasonText, x + cardWidth / 2, y + cardHeight / 2 - 4, 0xFFAAAAAA);
+            }
+        }
+
         if (maxScrollRow > 0) {
             renderScrollIndicator(context, yOffset);
         }
@@ -402,7 +495,7 @@ public class MapVotingScreen extends Screen {
 
         if (available) {
             // 人数
-            Text players = Text.translatable("gui.wathe.map_voting.player_range", map.minPlayers(), map.maxPlayers());
+            Text players = Text.translatable("gui.wathe.map_voting.player_recommendation", map.minPlayers(), map.maxPlayers());
             drawCenteredText(context, players, x + cw / 2, y + 30, TEXT_DIM);
 
             // 投票条（固定在底部）
@@ -457,8 +550,84 @@ public class MapVotingScreen extends Screen {
         }
     }
 
+    private void drawModeTicketCard(DrawContext context, int x, int y, VotingModeEntry mode,
+                                    boolean available, boolean selected, boolean hovered, int votes, int totalVotes, float probability) {
+        int cw = cardWidth;
+        int ch = cardHeight;
+        int bgColor = selected ? TICKET_BG_SELECTED : (available ? TICKET_BG : 0xFF504040);
+        int shadowColor = 0x66000000;
+
+        context.fill(x + 4, y + 4, x + cw + 4, y + ch + 4, shadowColor);
+        context.fillGradient(x, y, x + cw, y + ch, bgColor, available ? TICKET_BG_DARK : 0xFF302020);
+
+        int borderColor = selected ? BRASS_COLOR : (hovered ? 0xFF8B4513 : TEXT_INK);
+        if (!available) borderColor = 0xFF2A2A2A;
+
+        context.drawBorder(x + 2, y + 2, cw - 4, ch - 4, borderColor);
+        context.drawBorder(x + 5, y + 5, cw - 10, ch - 10, borderColor & 0x88FFFFFF);
+
+        context.fill(x + 6, y + 6, x + 8, y + 8, BRASS_DIM);
+        context.fill(x + cw - 8, y + 6, x + cw - 6, y + 8, BRASS_DIM);
+        context.fill(x + 6, y + ch - 8, x + 8, y + ch - 6, BRASS_DIM);
+        context.fill(x + cw - 8, y + ch - 8, x + cw - 6, y + ch - 6, BRASS_DIM);
+
+        int titleColor = available ? TEXT_INK : 0xFFAAAAAA;
+        drawCenteredText(context, Text.literal(mode.displayName()), x + cw / 2, y + 20, titleColor);
+
+        if (available) {
+            if (mode.showPlayerLimit()) {
+                Text players = Text.translatable("gui.wathe.mode_voting.min_players", mode.minPlayers());
+                drawCenteredText(context, players, x + cw / 2, y + 36, TEXT_DIM);
+            }
+
+            int barWidth = cw - 24;
+            int barX = x + 12;
+            int barY = y + ch - 25;
+            int descStartY = mode.showPlayerLimit() ? y + 48 : y + 40;
+            int lineHeight = 10;
+            int descAvailableHeight = barY - descStartY - 16;
+            int maxLines = Math.max(1, descAvailableHeight / lineHeight);
+            List<OrderedText> descLines = textRenderer.wrapLines(StringVisitable.plain(mode.description()), cw - 20);
+            int linesToRender = Math.min(descLines.size(), maxLines);
+            for (int line = 0; line < linesToRender; line++) {
+                OrderedText orderedText = descLines.get(line);
+                int lineWidth = textRenderer.getWidth(orderedText);
+                context.drawText(textRenderer, orderedText, x + (cw - lineWidth) / 2, descStartY + line * lineHeight, TEXT_DIM, false);
+            }
+
+            int probY = descStartY + linesToRender * lineHeight + 2;
+
+            String probStr = String.format("%.1f%%", probability * 100f);
+            int probColor = probability >= 0.5f ? TEXT_RED : BRASS_DIM;
+            drawCenteredText(context, Text.literal(probStr), x + cw / 2, probY, probColor);
+
+            context.fill(barX, barY, barX + barWidth, barY + 4, BAR_BG);
+            if (totalVotes > 0 && votes > 0) {
+                int fillW = (int) (((float) votes / totalVotes) * barWidth);
+                context.fill(barX, barY, barX + fillW, barY + 4, BAR_FILL);
+            }
+
+            Text voteText = Text.translatable("gui.wathe.map_voting.votes", votes);
+            context.getMatrices().push();
+            context.getMatrices().translate(x + cw / 2f, barY + 8, 0);
+            context.getMatrices().scale(0.8f, 0.8f, 1);
+            drawCenteredText(context, voteText, 0, 0, TEXT_DIM);
+            context.getMatrices().pop();
+
+            if (selected) {
+                context.drawBorder(x + cw - 30, y + ch - 30, 24, 24, 0xFFA00000);
+                context.getMatrices().push();
+                context.getMatrices().translate(x + cw - 18, y + ch - 18, 0);
+                context.getMatrices().scale(0.6f, 0.6f, 1);
+                context.getMatrices().multiply(net.minecraft.util.math.RotationAxis.POSITIVE_Z.rotationDegrees(-15));
+                drawCenteredText(context, Text.literal("VOTED"), 0, 0, 0xFFA00000);
+                context.getMatrices().pop();
+            }
+        }
+    }
+
     private void renderRouletteStrip(DrawContext context, List<VotingMapEntry> maps, float delta, int yOffset) {
-        if (rouletteSequence == null) return;
+        if (rouletteSequence == null || maps.isEmpty()) return;
 
         int centerY = this.height / 2;
         int centerX = this.width / 2;
@@ -534,6 +703,28 @@ public class MapVotingScreen extends Screen {
         drawTriangle(context, centerX, centerY + stripHeight / 2, 8, BRASS_COLOR, true);
     }
 
+    private List<VotingMapEntry> getRouletteMaps(MapVotingComponent voting) {
+        return voting.getAvailableMaps().stream()
+            .filter(map -> !RANDOM_MAP_OPTION_ID.equals(map.mapId()))
+            .toList();
+    }
+
+    private int getRouletteSelectedMapIndex(MapVotingComponent voting, List<VotingMapEntry> rouletteMaps) {
+        int selectedMapIndex = voting.getSelectedMapIndex();
+        List<VotingMapEntry> availableMaps = voting.getAvailableMaps();
+        if (selectedMapIndex < 0 || selectedMapIndex >= availableMaps.size()) {
+            return -1;
+        }
+
+        Identifier selectedMapId = availableMaps.get(selectedMapIndex).mapId();
+        for (int i = 0; i < rouletteMaps.size(); i++) {
+            if (selectedMapId.equals(rouletteMaps.get(i).mapId())) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     private void renderRouletteCard(DrawContext context, int x, int y, VotingMapEntry map, float scale, boolean isWinner, float time) {
         context.getMatrices().push();
         // 缩放中心
@@ -579,7 +770,7 @@ public class MapVotingScreen extends Screen {
             return super.mouseClicked(mouseX, mouseY, button);
         }
 
-        List<VotingMapEntry> maps = voting.getAvailableMaps();
+        int optionCount = voting.isModeVoting() ? voting.getAvailableModes().size() : voting.getAvailableMaps().size();
         int yOffset = (int)((1f - easeOutBack(Math.min(1f, slideProgress))) * 100);
 
         int gridWidth = layoutCols * cardWidth + (layoutCols - 1) * cardGap;
@@ -587,7 +778,7 @@ public class MapVotingScreen extends Screen {
         int baseY = layoutTopY - yOffset;
 
         int firstVisibleIndex = scrollRow * layoutCols;
-        int lastVisibleIndex = Math.min(maps.size(), firstVisibleIndex + layoutRows * layoutCols);
+        int lastVisibleIndex = Math.min(optionCount, firstVisibleIndex + layoutRows * layoutCols);
 
         for (int index = firstVisibleIndex; index < lastVisibleIndex; index++) {
             int visibleIndex = index - firstVisibleIndex;
@@ -640,6 +831,16 @@ public class MapVotingScreen extends Screen {
             }
         }
         return Text.translatable("gui.wathe.map_voting.unavailable");
+    }
+
+    private Text parseUnavailableModeReason(String reason) {
+        if (reason != null && reason.contains(":")) {
+            String[] parts = reason.split(":", 2);
+            if ("min_players".equals(parts[0])) {
+                return Text.translatable("gui.wathe.mode_voting.min_players", parts[1]);
+            }
+        }
+        return Text.translatable("gui.wathe.mode_voting.unavailable.no_maps");
     }
 
     // 居中绘制文字，无阴影

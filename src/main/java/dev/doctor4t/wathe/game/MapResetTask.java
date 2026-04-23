@@ -6,6 +6,7 @@ import dev.doctor4t.wathe.entity.FirecrackerEntity;
 import dev.doctor4t.wathe.entity.NoteEntity;
 import dev.doctor4t.wathe.entity.PlayerBodyEntity;
 import dev.doctor4t.wathe.index.WatheEntities;
+import dev.doctor4t.wathe.index.WatheProperties;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -16,6 +17,7 @@ import net.minecraft.entity.ItemEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.state.property.Properties;
 import net.minecraft.text.Text;
 import net.minecraft.util.Clearable;
 import net.minecraft.util.Formatting;
@@ -222,6 +224,7 @@ public class MapResetTask {
         serverWorld.getBlockTickScheduler().scheduleTicks(
                 serverWorld.getBlockTickScheduler(), backupTrainBox, offsetBlockPos
         );
+        refreshLitLights();
 
         // 清理实体（与原 tryResetTrain 逻辑一致）
         for (PlayerBodyEntity body : serverWorld.getEntitiesByType(WatheEntities.PLAYER_BODY, e -> true)) {
@@ -264,6 +267,26 @@ public class MapResetTask {
      * @param target 每个分块的目标方块数
      * @return 分块列表
      */
+    private void refreshLitLights() {
+        for (int y = backupTrainBox.getMinY(); y <= backupTrainBox.getMaxY(); y++) {
+            for (int x = backupTrainBox.getMinX(); x <= backupTrainBox.getMaxX(); x++) {
+                for (int z = backupTrainBox.getMinZ(); z <= backupTrainBox.getMaxZ(); z++) {
+                    BlockPos dstPos = new BlockPos(x, y, z).add(offsetBlockPos);
+                    BlockState state = serverWorld.getBlockState(dstPos);
+                    if (!state.contains(Properties.LIT) || !state.contains(WatheProperties.ACTIVE)) {
+                        continue;
+                    }
+                    if (!state.get(Properties.LIT) || !state.get(WatheProperties.ACTIVE)) {
+                        continue;
+                    }
+
+                    serverWorld.setBlockState(dstPos, state.with(Properties.LIT, false), Block.NOTIFY_ALL);
+                    serverWorld.setBlockState(dstPos, state, Block.NOTIFY_ALL);
+                }
+            }
+        }
+    }
+
     private static List<BlockBox> buildChunks(BlockBox box, int target) {
         List<BlockBox> chunks = new ArrayList<>();
 
@@ -385,6 +408,10 @@ public class MapResetTask {
                     BlockPos dstPos = new BlockPos(x, y, z).add(offset);
                     BlockState state = world.getBlockState(dstPos);
                     world.updateNeighbors(dstPos, state.getBlock());
+                    world.updateListeners(dstPos, state, state, Block.NOTIFY_LISTENERS);
+                    if (state.contains(Properties.LIT) && state.contains(WatheProperties.ACTIVE)) {
+                        world.getChunkManager().getLightingProvider().checkBlock(dstPos);
+                    }
                 }
             }
         }

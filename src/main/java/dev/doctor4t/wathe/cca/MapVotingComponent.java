@@ -1,24 +1,19 @@
 package dev.doctor4t.wathe.cca;
 
 import dev.doctor4t.wathe.Wathe;
-import dev.doctor4t.wathe.compat.TrainVoicePlugin;
+import dev.doctor4t.wathe.api.GameMode;
+import dev.doctor4t.wathe.api.WatheGameModes;
 import dev.doctor4t.wathe.config.datapack.MapRegistry;
 import dev.doctor4t.wathe.config.datapack.MapRegistryEntry;
 import dev.doctor4t.wathe.game.GameFunctions;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.scoreboard.Scoreboard;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.ladysnake.cca.api.v3.component.ComponentKey;
@@ -27,9 +22,6 @@ import org.ladysnake.cca.api.v3.component.sync.AutoSyncedComponent;
 import org.ladysnake.cca.api.v3.component.tick.ServerTickingComponent;
 
 import java.util.*;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 地图投票 ScoreboardComponent
@@ -42,18 +34,29 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
 
     private final Scoreboard scoreboard;
 
+    public enum VotingStage {
+        MODE,
+        MAP
+    }
+
     // === Synced state ===
     private boolean votingActive = false;
+    private VotingStage votingStage = VotingStage.MAP;
     private int votingTicksRemaining = 0;
+    private final List<VotingModeEntry> availableModes = new ArrayList<>();
+    private final List<UnavailableModeEntry> unavailableModes = new ArrayList<>();
     private final List<VotingMapEntry> availableMaps = new ArrayList<>();
     private final List<UnavailableMapEntry> unavailableMaps = new ArrayList<>();
     private int[] voteCounts = new int[0];
     private final Map<UUID, Integer> playerVotes = new HashMap<>();
+    private int selectedModeIndex = -1;
     private int selectedMapIndex = -1;
     private boolean roulettePhase = false;
     private int rouletteTicksRemaining = 0;
 
     // === Persisted ===
+    @Nullable
+    private Identifier lastSelectedGameMode = null;
     @Nullable
     private Identifier lastSelectedDimension = null;
 
@@ -64,13 +67,32 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
     private static final int VOTING_DURATION_TICKS = 30 * 20; // 30 seconds
     private static final int ROULETTE_DURATION_TICKS = 8 * 20; // 8 seconds (5s scroll + 3s stop)
     private static final int ALL_VOTED_REMAINING_TICKS = 5 * 20; // 5 seconds after all voted
-    private static final int MIN_PLAYERS_FOR_GAME = 6;
+    private static final int MIN_PLAYERS_FOR_VOTING = 2;
+    private static final Identifier RANDOM_MODE_OPTION_ID = Wathe.id("random_mode");
+    private static final Identifier RANDOM_MAP_OPTION_ID = Wathe.id("random_map");
+    private static final Identifier MURDER_DEFAULT_MAP_ID = Wathe.id("default");
+
+    public record VotingModeEntry(
+        Identifier gameModeId,
+        String displayName,
+        String description,
+        int minPlayers,
+        boolean showPlayerLimit
+    ) {}
+
+    public record UnavailableModeEntry(
+        Identifier gameModeId,
+        String displayName,
+        String reason
+    ) {}
 
     /**
      * 可用地图条目（同步到客户端）
      */
     public record VotingMapEntry(
+        Identifier mapId,
         Identifier dimensionId,
+        Identifier gameModeId,
         String displayName,
         String description,
         int minPlayers,
@@ -105,6 +127,18 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
         return votingTicksRemaining;
     }
 
+    public VotingStage getVotingStage() {
+        return votingStage;
+    }
+
+    public List<VotingModeEntry> getAvailableModes() {
+        return availableModes;
+    }
+
+    public List<UnavailableModeEntry> getUnavailableModes() {
+        return unavailableModes;
+    }
+
     public List<VotingMapEntry> getAvailableMaps() {
         return availableMaps;
     }
@@ -119,6 +153,10 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
 
     public int getVotedMapIndex(UUID playerId) {
         return playerVotes.getOrDefault(playerId, -1);
+    }
+
+    public int getSelectedModeIndex() {
+        return selectedModeIndex;
     }
 
     public int getPlayerVoteCount() {
@@ -138,6 +176,11 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
     }
 
     @Nullable
+    public Identifier getLastSelectedGameMode() {
+        return lastSelectedGameMode;
+    }
+
+    @Nullable
     public Identifier getLastSelectedDimension() {
         return lastSelectedDimension;
     }
@@ -148,6 +191,10 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
     public void setLastSelectedDimensionDirect(@Nullable Identifier dimensionId) {
         this.lastSelectedDimension = dimensionId;
         this.sync();
+    }
+
+    public boolean isModeVoting() {
+        return votingStage == VotingStage.MODE;
     }
 
     // === Voting Logic (server-side) ===
@@ -161,84 +208,243 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
             return;
         }
 
+        Identifier currentGameModeId = resolveCurrentGameModeId();
+        if (currentGameModeId == null) {
+            Wathe.LOGGER.warn("Cannot start map voting: current game mode is unknown");
+            return;
+        }
+
         int playerCount = 0;
         for (ServerWorld world : server.getWorlds()) {
             playerCount += world.getPlayers().size();
         }
 
-        Map<Identifier, MapRegistryEntry> allMaps = MapRegistry.getInstance().getMaps();
-        if (allMaps.isEmpty()) {
+        if (MapRegistry.getInstance().getMapCount() == 0) {
             Wathe.LOGGER.info("No maps registered, skipping voting");
             return;
         }
 
+        resetStateForNewVoting();
+        startMapVotingForMode(currentGameModeId, playerCount);
+    }
+
+    public void startModeVoting() {
+        if (server == null) {
+            Wathe.LOGGER.warn("Cannot start mode voting: server reference not set");
+            return;
+        }
+
+        if (MapRegistry.getInstance().getMapCount() == 0) {
+            Wathe.LOGGER.info("No maps registered, skipping mode voting");
+            return;
+        }
+
+        int playerCount = 0;
+        for (ServerWorld world : server.getWorlds()) {
+            playerCount += world.getPlayers().size();
+        }
+
+        resetStateForNewVoting();
         this.votingActive = true;
+        this.votingStage = VotingStage.MODE;
         this.votingTicksRemaining = VOTING_DURATION_TICKS;
+
+        buildModeChoices(playerCount);
+        this.voteCounts = new int[this.availableModes.size()];
+
+        if (this.availableModes.isEmpty()) {
+            Wathe.LOGGER.info("No eligible game modes for {} players, voting cancelled", playerCount);
+            reset();
+            return;
+        }
+
+        if (this.availableModes.size() == 1) {
+            startMapVotingForMode(this.availableModes.get(0).gameModeId(), playerCount);
+            return;
+        }
+
+        Wathe.LOGGER.info("Mode voting started with {} eligible modes, {} unavailable, for {} players",
+            availableModes.size(), unavailableModes.size(), playerCount);
+        this.sync();
+    }
+
+    private void resetStateForNewVoting() {
+        this.votingActive = true;
+        this.votingStage = VotingStage.MODE;
+        this.votingTicksRemaining = VOTING_DURATION_TICKS;
+        this.availableModes.clear();
+        this.unavailableModes.clear();
+        this.selectedModeIndex = -1;
         this.selectedMapIndex = -1;
         this.roulettePhase = false;
         this.rouletteTicksRemaining = 0;
         this.playerVotes.clear();
         this.availableMaps.clear();
         this.unavailableMaps.clear();
+        this.voteCounts = new int[0];
+    }
 
-        for (Map.Entry<Identifier, MapRegistryEntry> entry : allMaps.entrySet()) {
-            MapRegistryEntry mapEntry = entry.getValue();
+    private void buildModeChoices(int playerCount) {
+        for (GameMode mode : WatheGameModes.GAME_MODES.values()) {
+            if (mode.identifier.equals(WatheGameModes.DISCOVERY_ID)) {
+                continue;
+            }
+
+            List<MapRegistryEntry> mapsForMode = MapRegistry.getInstance().getMapsForGameMode(mode.identifier);
+            if (mapsForMode.isEmpty()) {
+                continue;
+            }
+
+            List<MapRegistryEntry> eligibleMapsForMode = MapRegistry.getInstance().getEligibleMapsForGameMode(mode.identifier, playerCount);
+            if (playerCount < mode.minPlayerCount || eligibleMapsForMode.isEmpty()) {
+                this.unavailableModes.add(new UnavailableModeEntry(
+                    mode.identifier,
+                    net.minecraft.text.Text.translatable("gamemode." + mode.identifier.getNamespace() + "." + mode.identifier.getPath()).getString(),
+                    playerCount < mode.minPlayerCount ? "min_players:" + mode.minPlayerCount : "no_maps"
+                ));
+                continue;
+            }
+
+            this.availableModes.add(new VotingModeEntry(
+                mode.identifier,
+                net.minecraft.text.Text.translatable("gamemode." + mode.identifier.getNamespace() + "." + mode.identifier.getPath()).getString(),
+                net.minecraft.text.Text.translatable(
+                    "gui.wathe.mode_voting.description." + mode.identifier.getNamespace() + "." + mode.identifier.getPath()
+                ).getString(),
+                mode.minPlayerCount,
+                mode.hasPlayerLimitDisplay
+            ));
+        }
+
+        if (this.availableModes.size() > 1) {
+            this.availableModes.add(0, new VotingModeEntry(
+                RANDOM_MODE_OPTION_ID,
+                net.minecraft.text.Text.translatable("gui.wathe.mode_voting.random_mode").getString(),
+                net.minecraft.text.Text.translatable("gui.wathe.mode_voting.random_mode.description").getString(),
+                0,
+                false
+            ));
+        }
+    }
+
+    private void startMapVotingForMode(Identifier gameModeId, int playerCount) {
+        this.votingActive = true;
+        this.votingStage = VotingStage.MAP;
+        this.votingTicksRemaining = VOTING_DURATION_TICKS;
+        this.roulettePhase = false;
+        this.rouletteTicksRemaining = 0;
+        this.playerVotes.clear();
+        this.availableMaps.clear();
+        this.unavailableMaps.clear();
+
+        List<MapRegistryEntry> allModeMaps = MapRegistry.getInstance().getMapsForGameMode(gameModeId);
+        for (MapRegistryEntry mapEntry : allModeMaps) {
             if (mapEntry.isEligible(playerCount)) {
                 this.availableMaps.add(new VotingMapEntry(
+                    mapEntry.id(),
                     mapEntry.dimensionId(),
+                    gameModeId,
                     mapEntry.displayName(),
                     mapEntry.description().orElse(""),
                     mapEntry.minPlayers(),
                     mapEntry.maxPlayers()
                 ));
             } else {
-                // Build reason string
-                String reason;
-                if (playerCount < mapEntry.minPlayers()) {
-                    reason = "min_players:" + mapEntry.minPlayers();
-                } else {
-                    reason = "max_players:" + mapEntry.maxPlayers();
-                }
                 this.unavailableMaps.add(new UnavailableMapEntry(
                     mapEntry.dimensionId(),
                     mapEntry.displayName(),
-                    reason
+                    getMapUnavailableReason(mapEntry, playerCount)
                 ));
             }
         }
 
-        this.voteCounts = new int[this.availableMaps.size()];
+        if (getRandomizableMapIndices(gameModeId).size() > 1) {
+            this.availableMaps.add(0, new VotingMapEntry(
+                RANDOM_MAP_OPTION_ID,
+                RANDOM_MAP_OPTION_ID,
+                gameModeId,
+                net.minecraft.text.Text.translatable("gui.wathe.map_voting.random_map").getString(),
+                net.minecraft.text.Text.translatable("gui.wathe.map_voting.random_map.description").getString(),
+                0,
+                0
+            ));
+        }
 
-        // If only 0 or 1 available maps, handle immediately
+        this.voteCounts = new int[this.availableMaps.size()];
+        this.selectedModeIndex = indexOfMode(gameModeId);
+        this.lastSelectedGameMode = gameModeId;
+
         if (this.availableMaps.isEmpty()) {
-            Wathe.LOGGER.info("No eligible maps for {} players, voting cancelled", playerCount);
-            this.votingActive = false;
-            this.sync();
+            Wathe.LOGGER.info("No eligible maps for mode {} and {} players, voting cancelled", gameModeId, playerCount);
+            reset();
             return;
         }
 
         if (this.availableMaps.size() == 1) {
-            // Single map: skip voting, teleport directly
-            Identifier targetDimension = this.availableMaps.get(0).dimensionId();
-            this.lastSelectedDimension = targetDimension;
+            VotingMapEntry onlyMap = this.availableMaps.get(0);
+            this.lastSelectedDimension = onlyMap.dimensionId();
             this.votingActive = false;
             this.sync();
             ServerWorld overworld = server.getOverworld();
-            GameFunctions.finalizeVoting(overworld, targetDimension);
+            GameFunctions.finalizeVoting(overworld, gameModeId, onlyMap.dimensionId());
             return;
         }
 
-        Wathe.LOGGER.info("Map voting started with {} eligible maps, {} unavailable, for {} players",
-            availableMaps.size(), unavailableMaps.size(), playerCount);
+        Wathe.LOGGER.info("Map voting started for mode {} with {} eligible maps, {} unavailable, for {} players",
+            gameModeId, availableMaps.size(), unavailableMaps.size(), playerCount);
         this.sync();
+    }
+
+    private String getMapUnavailableReason(MapRegistryEntry mapEntry, int playerCount) {
+        if (playerCount < mapEntry.minPlayers()) {
+            return "min_players:" + mapEntry.minPlayers();
+        }
+        if (playerCount > mapEntry.maxPlayers()) {
+            return "max_players:" + mapEntry.maxPlayers();
+        }
+        return "unavailable";
+    }
+
+    private int indexOfMode(Identifier gameModeId) {
+        for (int i = 0; i < availableModes.size(); i++) {
+            if (availableModes.get(i).gameModeId().equals(gameModeId)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    @Nullable
+    private Identifier resolveCurrentGameModeId() {
+        if (server == null) {
+            return null;
+        }
+
+        ServerWorld overworld = server.getOverworld();
+        ServerWorld preferredWorld = overworld;
+        if (lastSelectedDimension != null) {
+            ServerWorld selectedWorld = server.getWorld(net.minecraft.registry.RegistryKey.of(net.minecraft.registry.RegistryKeys.WORLD, lastSelectedDimension));
+            if (selectedWorld != null) {
+                preferredWorld = selectedWorld;
+            }
+        }
+        if (preferredWorld != null) {
+            GameMode currentMode = GameWorldComponent.KEY.get(preferredWorld).getGameMode();
+            if (currentMode != null) {
+                return currentMode.identifier;
+            }
+        }
+
+        return lastSelectedGameMode;
     }
 
     /**
      * 投票（服务端验证）
      */
-    public void castVote(UUID playerId, int mapIndex) {
+    public void castVote(UUID playerId, int optionIndex) {
         if (!votingActive || roulettePhase) return;
-        if (mapIndex < 0 || mapIndex >= availableMaps.size()) return;
+        int optionCount = votingStage == VotingStage.MODE ? availableModes.size() : availableMaps.size();
+        if (optionIndex < 0 || optionIndex >= optionCount) return;
 
         // Remove old vote
         Integer oldVote = playerVotes.get(playerId);
@@ -247,8 +453,8 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
         }
 
         // Record new vote
-        playerVotes.put(playerId, mapIndex);
-        voteCounts[mapIndex]++;
+        playerVotes.put(playerId, optionIndex);
+        voteCounts[optionIndex]++;
 
         // 所有在线玩家都投票完成时，缩短倒计时到5秒
         if (server != null && !roulettePhase) {
@@ -264,10 +470,28 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
         this.sync();
     }
 
+    public boolean skipWaitingPhase() {
+        if (!votingActive || server == null) {
+            return false;
+        }
+
+        if (roulettePhase) {
+            finishSelection();
+            return true;
+        }
+
+        endVoting(true);
+        return true;
+    }
+
     /**
      * 投票结束，执行加权随机选择
      */
     private void endVoting() {
+        endVoting(false);
+    }
+
+    private void endVoting(boolean ignoreMinPlayers) {
         if (server == null) return;
 
         int onlinePlayers = 0;
@@ -275,16 +499,52 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
             onlinePlayers += world.getPlayers().size();
         }
 
-        if (onlinePlayers < MIN_PLAYERS_FOR_GAME) {
-            // Not enough players, reset timer and wait
+        if (!ignoreMinPlayers && onlinePlayers < MIN_PLAYERS_FOR_VOTING) {
+            // Not enough players to complete a vote yet, reset timer and wait
             this.votingTicksRemaining = VOTING_DURATION_TICKS;
             Wathe.LOGGER.info("Not enough players ({}/{}) for voting result, resetting timer",
-                onlinePlayers, MIN_PLAYERS_FOR_GAME);
+                onlinePlayers, MIN_PLAYERS_FOR_VOTING);
             this.sync();
             return;
         }
 
-        this.selectedMapIndex = selectMapWeighted();
+        int optionCount = votingStage == VotingStage.MODE ? availableModes.size() : availableMaps.size();
+        int selectedIndex = selectOptionWeighted(optionCount);
+        if (votingStage == VotingStage.MODE) {
+            if (selectedIndex < 0 || selectedIndex >= availableModes.size()) {
+                reset();
+                return;
+            }
+            Identifier selectedGameModeId = availableModes.get(selectedIndex).gameModeId();
+            if (RANDOM_MODE_OPTION_ID.equals(selectedGameModeId)) {
+                selectedGameModeId = selectRandomModeFromCurrentChoices();
+                if (selectedGameModeId == null) {
+                    reset();
+                    return;
+                }
+            }
+            this.selectedModeIndex = indexOfMode(selectedGameModeId);
+            int playerCount = 0;
+            for (ServerWorld world : server.getWorlds()) {
+                playerCount += world.getPlayers().size();
+            }
+            startMapVotingForMode(selectedGameModeId, playerCount);
+            return;
+        }
+
+        if (selectedIndex < 0 || selectedIndex >= availableMaps.size()) {
+            reset();
+            return;
+        }
+        VotingMapEntry selectedEntry = availableMaps.get(selectedIndex);
+        if (RANDOM_MAP_OPTION_ID.equals(selectedEntry.mapId())) {
+            selectedIndex = selectRandomMapIndexForCurrentChoices(selectedEntry.gameModeId());
+            if (selectedIndex < 0 || selectedIndex >= availableMaps.size()) {
+                reset();
+                return;
+            }
+        }
+        this.selectedMapIndex = selectedIndex;
         this.roulettePhase = true;
         this.rouletteTicksRemaining = ROULETTE_DURATION_TICKS;
 
@@ -299,12 +559,12 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
     /**
      * 加权随机选择：0票=权重1，有票按票数
      */
-    private int selectMapWeighted() {
-        if (availableMaps.isEmpty()) return -1;
+    private int selectOptionWeighted(int optionCount) {
+        if (optionCount <= 0) return -1;
 
         Random random = new Random();
         int totalWeight = 0;
-        int[] weights = new int[availableMaps.size()];
+        int[] weights = new int[optionCount];
 
         // 检查是否有任何人投票
         boolean hasAnyVotes = false;
@@ -312,10 +572,21 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
             if (c > 0) { hasAnyVotes = true; break; }
         }
 
-        for (int i = 0; i < voteCounts.length; i++) {
-            // 无人投票：所有地图等概率；有人投票：只有获得票数的地图有概率
+        if (!hasAnyVotes) {
+            int randomOptionIndex = getRandomOptionIndexForCurrentStage();
+            if (randomOptionIndex >= 0) {
+                return randomOptionIndex;
+            }
+        }
+
+        for (int i = 0; i < optionCount; i++) {
+            // 无人投票：所有选项等概率；有人投票：只有获得票数的选项有概率
             weights[i] = hasAnyVotes ? voteCounts[i] : 1;
             totalWeight += weights[i];
+        }
+
+        if (totalWeight <= 0) {
+            return 0;
         }
 
         int roll = random.nextInt(totalWeight);
@@ -328,6 +599,59 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
         }
 
         return 0; // fallback
+    }
+
+    private int getRandomOptionIndexForCurrentStage() {
+        if (votingStage == VotingStage.MODE) {
+            return indexOfMode(RANDOM_MODE_OPTION_ID);
+        }
+
+        for (int i = 0; i < availableMaps.size(); i++) {
+            if (RANDOM_MAP_OPTION_ID.equals(availableMaps.get(i).mapId())) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    @Nullable
+    private Identifier selectRandomModeFromCurrentChoices() {
+        List<Identifier> candidates = new ArrayList<>();
+        for (VotingModeEntry entry : availableModes) {
+            if (!RANDOM_MODE_OPTION_ID.equals(entry.gameModeId())) {
+                candidates.add(entry.gameModeId());
+            }
+        }
+        if (candidates.isEmpty()) {
+            return null;
+        }
+        return candidates.get(new Random().nextInt(candidates.size()));
+    }
+
+    private int selectRandomMapIndexForCurrentChoices(Identifier gameModeId) {
+        List<Integer> candidates = getRandomizableMapIndices(gameModeId);
+        if (candidates.isEmpty()) {
+            return -1;
+        }
+        return candidates.get(new Random().nextInt(candidates.size()));
+    }
+
+    private List<Integer> getRandomizableMapIndices(Identifier gameModeId) {
+        List<Integer> candidates = new ArrayList<>();
+        for (int i = 0; i < availableMaps.size(); i++) {
+            VotingMapEntry entry = availableMaps.get(i);
+            if (RANDOM_MAP_OPTION_ID.equals(entry.mapId())) {
+                continue;
+            }
+            if (!entry.gameModeId().equals(gameModeId)) {
+                continue;
+            }
+            if (WatheGameModes.MURDER_ID.equals(gameModeId) && MURDER_DEFAULT_MAP_ID.equals(entry.mapId())) {
+                continue;
+            }
+            candidates.add(i);
+        }
+        return candidates;
     }
 
     /**
@@ -343,6 +667,8 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
         }
 
         Identifier targetDimensionId = availableMaps.get(selectedMapIndex).dimensionId();
+        Identifier targetGameModeId = availableMaps.get(selectedMapIndex).gameModeId();
+        this.lastSelectedGameMode = targetGameModeId;
         this.lastSelectedDimension = targetDimensionId;
 
         // Reset voting state before teleport
@@ -351,7 +677,7 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
 
         // Execute teleport from overworld (or any world with players)
         ServerWorld overworld = server.getOverworld();
-        GameFunctions.finalizeVoting(overworld, targetDimensionId);
+        GameFunctions.finalizeVoting(overworld, targetGameModeId, targetDimensionId);
     }
 
     /**
@@ -359,11 +685,15 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
      */
     public void reset() {
         this.votingActive = false;
+        this.votingStage = VotingStage.MODE;
         this.votingTicksRemaining = 0;
+        this.availableModes.clear();
+        this.unavailableModes.clear();
         this.availableMaps.clear();
         this.unavailableMaps.clear();
         this.voteCounts = new int[0];
         this.playerVotes.clear();
+        this.selectedModeIndex = -1;
         this.selectedMapIndex = -1;
         this.roulettePhase = false;
         this.rouletteTicksRemaining = 0;
@@ -404,7 +734,7 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
             for (ServerWorld world : server.getWorlds()) {
                 onlinePlayers += world.getPlayers().size();
             }
-            if (onlinePlayers >= MIN_PLAYERS_FOR_GAME && votingTicksRemaining <= 0) {
+            if (onlinePlayers >= MIN_PLAYERS_FOR_VOTING && votingTicksRemaining <= 0) {
                 votingTicksRemaining = VOTING_DURATION_TICKS;
                 this.sync();
             }
@@ -418,10 +748,22 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
     @Override
     public void readFromNbt(@NotNull NbtCompound tag, RegistryWrapper.WrapperLookup registryLookup) {
         this.votingActive = tag.getBoolean("VotingActive");
+        if (tag.contains("VotingStage")) {
+            this.votingStage = VotingStage.valueOf(tag.getString("VotingStage"));
+        } else {
+            this.votingStage = VotingStage.MAP;
+        }
         this.votingTicksRemaining = tag.getInt("VotingTicksRemaining");
+        this.selectedModeIndex = tag.getInt("SelectedModeIndex");
         this.selectedMapIndex = tag.getInt("SelectedMapIndex");
         this.roulettePhase = tag.getBoolean("RoulettePhase");
         this.rouletteTicksRemaining = tag.getInt("RouletteTicksRemaining");
+
+        if (tag.contains("LastSelectedGameMode")) {
+            this.lastSelectedGameMode = Identifier.tryParse(tag.getString("LastSelectedGameMode"));
+        } else {
+            this.lastSelectedGameMode = null;
+        }
 
         // Last selected dimension (persisted)
         if (tag.contains("LastSelectedDimension")) {
@@ -430,14 +772,51 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
             this.lastSelectedDimension = null;
         }
 
+        this.availableModes.clear();
+        if (tag.contains("AvailableModes")) {
+            NbtList modeList = tag.getList("AvailableModes", NbtElement.COMPOUND_TYPE);
+            for (NbtElement e : modeList) {
+                NbtCompound modeNbt = (NbtCompound) e;
+                this.availableModes.add(new VotingModeEntry(
+                    Identifier.tryParse(modeNbt.getString("GameModeId")),
+                    modeNbt.getString("DisplayName"),
+                    modeNbt.getString("Description"),
+                    modeNbt.getInt("MinPlayers"),
+                    modeNbt.getBoolean("ShowPlayerLimit")
+                ));
+            }
+        }
+
+        this.unavailableModes.clear();
+        if (tag.contains("UnavailableModes")) {
+            NbtList modeList = tag.getList("UnavailableModes", NbtElement.COMPOUND_TYPE);
+            for (NbtElement e : modeList) {
+                NbtCompound modeNbt = (NbtCompound) e;
+                this.unavailableModes.add(new UnavailableModeEntry(
+                    Identifier.tryParse(modeNbt.getString("GameModeId")),
+                    modeNbt.getString("DisplayName"),
+                    modeNbt.getString("Reason")
+                ));
+            }
+        }
+
         // Available maps
         this.availableMaps.clear();
         if (tag.contains("AvailableMaps")) {
             NbtList mapsList = tag.getList("AvailableMaps", NbtElement.COMPOUND_TYPE);
             for (NbtElement e : mapsList) {
                 NbtCompound mapNbt = (NbtCompound) e;
+                Identifier dimensionId = Identifier.tryParse(mapNbt.getString("DimensionId"));
+                Identifier mapId = mapNbt.contains("MapId")
+                    ? Identifier.tryParse(mapNbt.getString("MapId"))
+                    : MapRegistryEntry.defaultReferenceIdForDimension(dimensionId);
+                Identifier gameModeId = mapNbt.contains("GameModeId")
+                    ? Identifier.tryParse(mapNbt.getString("GameModeId"))
+                    : (this.lastSelectedGameMode != null ? this.lastSelectedGameMode : WatheGameModes.MURDER_ID);
                 this.availableMaps.add(new VotingMapEntry(
-                    Identifier.tryParse(mapNbt.getString("DimensionId")),
+                    mapId,
+                    dimensionId,
+                    gameModeId,
                     mapNbt.getString("DisplayName"),
                     mapNbt.getString("Description"),
                     mapNbt.getInt("MinPlayers"),
@@ -483,21 +862,51 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
     @Override
     public void writeToNbt(@NotNull NbtCompound tag, RegistryWrapper.WrapperLookup registryLookup) {
         tag.putBoolean("VotingActive", votingActive);
+        tag.putString("VotingStage", votingStage.name());
         tag.putInt("VotingTicksRemaining", votingTicksRemaining);
+        tag.putInt("SelectedModeIndex", selectedModeIndex);
         tag.putInt("SelectedMapIndex", selectedMapIndex);
         tag.putBoolean("RoulettePhase", roulettePhase);
         tag.putInt("RouletteTicksRemaining", rouletteTicksRemaining);
+
+        if (lastSelectedGameMode != null) {
+            tag.putString("LastSelectedGameMode", lastSelectedGameMode.toString());
+        }
 
         // Last selected dimension
         if (lastSelectedDimension != null) {
             tag.putString("LastSelectedDimension", lastSelectedDimension.toString());
         }
 
+        NbtList modeList = new NbtList();
+        for (VotingModeEntry entry : availableModes) {
+            NbtCompound modeNbt = new NbtCompound();
+            modeNbt.putString("GameModeId", entry.gameModeId().toString());
+            modeNbt.putString("DisplayName", entry.displayName());
+            modeNbt.putString("Description", entry.description());
+            modeNbt.putInt("MinPlayers", entry.minPlayers());
+            modeNbt.putBoolean("ShowPlayerLimit", entry.showPlayerLimit());
+            modeList.add(modeNbt);
+        }
+        tag.put("AvailableModes", modeList);
+
+        NbtList unavailableModeList = new NbtList();
+        for (UnavailableModeEntry entry : unavailableModes) {
+            NbtCompound modeNbt = new NbtCompound();
+            modeNbt.putString("GameModeId", entry.gameModeId().toString());
+            modeNbt.putString("DisplayName", entry.displayName());
+            modeNbt.putString("Reason", entry.reason());
+            unavailableModeList.add(modeNbt);
+        }
+        tag.put("UnavailableModes", unavailableModeList);
+
         // Available maps
         NbtList mapsList = new NbtList();
         for (VotingMapEntry entry : availableMaps) {
             NbtCompound mapNbt = new NbtCompound();
+            mapNbt.putString("MapId", entry.mapId().toString());
             mapNbt.putString("DimensionId", entry.dimensionId().toString());
+            mapNbt.putString("GameModeId", entry.gameModeId().toString());
             mapNbt.putString("DisplayName", entry.displayName());
             mapNbt.putString("Description", entry.description());
             mapNbt.putInt("MinPlayers", entry.minPlayers());

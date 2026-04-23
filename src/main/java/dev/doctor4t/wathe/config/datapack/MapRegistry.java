@@ -40,6 +40,26 @@ public class MapRegistry {
         return maps.size();
     }
 
+    public List<MapRegistryEntry> getMapsForGameMode(Identifier gameModeId) {
+        List<MapRegistryEntry> filtered = new ArrayList<>();
+        for (MapRegistryEntry entry : maps.values()) {
+            if (entry.supportsGameMode(gameModeId)) {
+                filtered.add(entry);
+            }
+        }
+        return filtered;
+    }
+
+    public List<MapRegistryEntry> getEligibleMapsForGameMode(Identifier gameModeId, int playerCount) {
+        List<MapRegistryEntry> eligible = new ArrayList<>();
+        for (MapRegistryEntry entry : maps.values()) {
+            if (entry.supportsGameMode(gameModeId) && entry.isEligible(playerCount)) {
+                eligible.add(entry);
+            }
+        }
+        return eligible;
+    }
+
     public Set<Identifier> getMapIds() {
         return Collections.unmodifiableSet(maps.keySet());
     }

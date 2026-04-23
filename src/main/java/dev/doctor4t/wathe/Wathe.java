@@ -106,6 +106,8 @@ public class Wathe implements ModInitializer {
             SetTimerCommand.register(dispatcher);
             SetMoneyCommand.register(dispatcher);
             MapVoteCommand.register(dispatcher);
+            ModeVoteCommand.register(dispatcher);
+            SkipVoteWaitCommand.register(dispatcher);
             SetGradualResetCommand.register(dispatcher);
         }));
 
