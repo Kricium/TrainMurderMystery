@@ -12,7 +12,6 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.OrderedText;
-import net.minecraft.text.StringVisitable;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
@@ -490,7 +489,7 @@ public class MapVotingScreen extends Screen {
         int titleColor = available ? TEXT_INK : 0xFFAAAAAA;
 
         // 地图名
-        Text name = Text.literal(map.displayName());
+        Text name = localizeSyncedText(map.displayName());
         drawCenteredText(context, name, x + cw / 2, y + 15, titleColor);
 
         if (available) {
@@ -508,7 +507,7 @@ public class MapVotingScreen extends Screen {
             int lineHeight = 10;
             int descAvailableHeight = barY - descStartY - 16; // 留出概率文字的空间
             int maxLines = Math.max(1, descAvailableHeight / lineHeight);
-            List<OrderedText> descLines = textRenderer.wrapLines(StringVisitable.plain(map.description()), cw - 20);
+            List<OrderedText> descLines = textRenderer.wrapLines(localizeSyncedText(map.description()), cw - 20);
             int linesToRender = Math.min(descLines.size(), maxLines);
             for (int line = 0; line < linesToRender; line++) {
                 OrderedText orderedText = descLines.get(line);
@@ -530,7 +529,7 @@ public class MapVotingScreen extends Screen {
             }
 
             // 票数文字
-            Text voteText = Text.literal(votes + " Votes");
+            Text voteText = Text.translatable("gui.wathe.map_voting.votes", votes);
             context.getMatrices().push();
             context.getMatrices().translate(x + cw / 2f, barY + 8, 0);
             context.getMatrices().scale(0.8f, 0.8f, 1);
@@ -572,7 +571,7 @@ public class MapVotingScreen extends Screen {
         context.fill(x + cw - 8, y + ch - 8, x + cw - 6, y + ch - 6, BRASS_DIM);
 
         int titleColor = available ? TEXT_INK : 0xFFAAAAAA;
-        drawCenteredText(context, Text.literal(mode.displayName()), x + cw / 2, y + 20, titleColor);
+        drawCenteredText(context, localizeSyncedText(mode.displayName()), x + cw / 2, y + 20, titleColor);
 
         if (available) {
             if (mode.showPlayerLimit()) {
@@ -587,7 +586,7 @@ public class MapVotingScreen extends Screen {
             int lineHeight = 10;
             int descAvailableHeight = barY - descStartY - 16;
             int maxLines = Math.max(1, descAvailableHeight / lineHeight);
-            List<OrderedText> descLines = textRenderer.wrapLines(StringVisitable.plain(mode.description()), cw - 20);
+            List<OrderedText> descLines = textRenderer.wrapLines(localizeSyncedText(mode.description()), cw - 20);
             int linesToRender = Math.min(descLines.size(), maxLines);
             for (int line = 0; line < linesToRender; line++) {
                 OrderedText orderedText = descLines.get(line);
@@ -744,11 +743,11 @@ public class MapVotingScreen extends Screen {
         context.drawBorder(3, 3, STRIP_CARD_WIDTH - 6, STRIP_CARD_HEIGHT - 6, borderColor & 0x88FFFFFF);
 
         // 文字
-        drawCenteredText(context, Text.literal(map.displayName()),
+        drawCenteredText(context, localizeSyncedText(map.displayName()),
                 STRIP_CARD_WIDTH / 2, 10, TEXT_INK);
 
         drawCenteredText(context,
-                Text.translatable("gui.wathe.map_voting.player_range", map.minPlayers(), map.maxPlayers()),
+                Text.translatable("gui.wathe.map_voting.player_recommendation", map.minPlayers(), map.maxPlayers()),
                 STRIP_CARD_WIDTH / 2, 25, TEXT_DIM);
 
         context.getMatrices().pop();
@@ -831,6 +830,16 @@ public class MapVotingScreen extends Screen {
             }
         }
         return Text.translatable("gui.wathe.map_voting.unavailable");
+    }
+
+    private Text localizeSyncedText(String text) {
+        if (text == null || text.isEmpty()) {
+            return Text.empty();
+        }
+        if (text.startsWith("gui.wathe.") || text.startsWith("gamemode.")) {
+            return Text.translatable(text);
+        }
+        return Text.literal(text);
     }
 
     private Text parseUnavailableModeReason(String reason) {
