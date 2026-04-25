@@ -232,6 +232,10 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
     }
 
     public void startModeVoting() {
+        startModeVoting(false);
+    }
+
+    private void startModeVoting(boolean forceModeVoting) {
         if (server == null) {
             Wathe.LOGGER.warn("Cannot start mode voting: server reference not set");
             return;
@@ -263,7 +267,7 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
             return;
         }
 
-        if (this.availableModes.size() == 1) {
+        if (this.availableModes.size() == 1 && !forceModeVoting) {
             startMapVotingForMode(this.availableModes.get(0).gameModeId(), playerCount);
             return;
         }
@@ -298,15 +302,6 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
 
             List<MapRegistryEntry> mapsForMode = MapRegistry.getInstance().getMapsForGameMode(mode.identifier);
             if (mapsForMode.isEmpty()) {
-                continue;
-            }
-
-            if (playerCount < mode.minPlayerCount) {
-                this.unavailableModes.add(new UnavailableModeEntry(
-                    mode.identifier,
-                    getGameModeNameKey(mode.identifier),
-                    "min_players:" + mode.minPlayerCount
-                ));
                 continue;
             }
 
@@ -713,7 +708,7 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
 
         if (!votingActive) {
             if (waitingForPlayersToStartVoting && onlinePlayers >= MIN_PLAYERS_TO_START_VOTING) {
-                startModeVoting();
+                startModeVoting(true);
             }
             return;
         }
