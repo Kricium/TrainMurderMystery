@@ -53,6 +53,8 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
     private int selectedMapIndex = -1;
     private boolean roulettePhase = false;
     private int rouletteTicksRemaining = 0;
+    private boolean waitingForPlayersToStartVoting = false;
+    private VotingStage waitingVotingStage = VotingStage.MODE;
 
     // === Persisted ===
     @Nullable
@@ -67,6 +69,7 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
     private static final int VOTING_DURATION_TICKS = 30 * 20; // 30 seconds
     private static final int ROULETTE_DURATION_TICKS = 8 * 20; // 8 seconds (5s scroll + 3s stop)
     private static final int ALL_VOTED_REMAINING_TICKS = 5 * 20; // 5 seconds after all voted
+    private static final int MIN_PLAYERS_TO_START_VOTING = 2;
     private static final Identifier RANDOM_MODE_OPTION_ID = Wathe.id("random_mode");
     private static final Identifier RANDOM_MAP_OPTION_ID = Wathe.id("random_map");
     private static final Identifier MURDER_DEFAULT_MAP_ID = Wathe.id("default");
@@ -207,15 +210,17 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
             return;
         }
 
+        int playerCount = getOnlinePlayerCount();
+        if (playerCount < MIN_PLAYERS_TO_START_VOTING) {
+            resetAndWaitForPlayers(VotingStage.MAP);
+            Wathe.LOGGER.info("Waiting to start map voting: {}/{} players online", playerCount, MIN_PLAYERS_TO_START_VOTING);
+            return;
+        }
+
         Identifier currentGameModeId = resolveCurrentGameModeId();
         if (currentGameModeId == null) {
             Wathe.LOGGER.warn("Cannot start map voting: current game mode is unknown");
             return;
-        }
-
-        int playerCount = 0;
-        for (ServerWorld world : server.getWorlds()) {
-            playerCount += world.getPlayers().size();
         }
 
         if (MapRegistry.getInstance().getMapCount() == 0) {
@@ -233,14 +238,16 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
             return;
         }
 
-        if (MapRegistry.getInstance().getMapCount() == 0) {
-            Wathe.LOGGER.info("No maps registered, skipping mode voting");
+        int playerCount = getOnlinePlayerCount();
+        if (playerCount < MIN_PLAYERS_TO_START_VOTING) {
+            resetAndWaitForPlayers(VotingStage.MODE);
+            Wathe.LOGGER.info("Waiting to start mode voting: {}/{} players online", playerCount, MIN_PLAYERS_TO_START_VOTING);
             return;
         }
 
-        int playerCount = 0;
-        for (ServerWorld world : server.getWorlds()) {
-            playerCount += world.getPlayers().size();
+        if (MapRegistry.getInstance().getMapCount() == 0) {
+            Wathe.LOGGER.info("No maps registered, skipping mode voting");
+            return;
         }
 
         resetStateForNewVoting();
@@ -268,6 +275,7 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
     }
 
     private void resetStateForNewVoting() {
+        this.waitingForPlayersToStartVoting = false;
         this.votingActive = true;
         this.votingStage = VotingStage.MODE;
         this.votingTicksRemaining = VOTING_DURATION_TICKS;
@@ -378,6 +386,25 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
         Wathe.LOGGER.info("Map voting started for mode {} with {} eligible maps, {} unavailable, for {} players",
             gameModeId, availableMaps.size(), unavailableMaps.size(), playerCount);
         this.sync();
+    }
+
+    private void resetAndWaitForPlayers(VotingStage votingStage) {
+        reset();
+        this.waitingForPlayersToStartVoting = true;
+        this.waitingVotingStage = votingStage;
+        this.sync();
+    }
+
+    private int getOnlinePlayerCount() {
+        if (server == null) {
+            return 0;
+        }
+
+        int playerCount = 0;
+        for (ServerWorld world : server.getWorlds()) {
+            playerCount += world.getPlayers().size();
+        }
+        return playerCount;
     }
 
     private String getMapUnavailableReason(MapRegistryEntry mapEntry, int playerCount) {
@@ -655,6 +682,8 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
      * 清空所有状态
      */
     public void reset() {
+        this.waitingForPlayersToStartVoting = false;
+        this.waitingVotingStage = VotingStage.MODE;
         this.votingActive = false;
         this.votingStage = VotingStage.MODE;
         this.votingTicksRemaining = 0;
@@ -676,7 +705,25 @@ public class MapVotingComponent implements AutoSyncedComponent, ServerTickingCom
      */
     @Override
     public void serverTick() {
-        if (!votingActive) return;
+        if (server == null) return;
+
+        int onlinePlayers = getOnlinePlayerCount();
+        if (votingActive && onlinePlayers == 0) {
+            resetAndWaitForPlayers(votingStage);
+            Wathe.LOGGER.info("Voting reset because the server is empty; waiting for {} players", MIN_PLAYERS_TO_START_VOTING);
+            return;
+        }
+
+        if (!votingActive) {
+            if (waitingForPlayersToStartVoting && onlinePlayers >= MIN_PLAYERS_TO_START_VOTING) {
+                if (waitingVotingStage == VotingStage.MAP) {
+                    startVoting();
+                } else {
+                    startModeVoting();
+                }
+            }
+            return;
+        }
 
         if (roulettePhase) {
             if (--rouletteTicksRemaining <= 0) {
