@@ -37,6 +37,7 @@ import net.fabricmc.fabric.api.networking.v1.ServerConfigurationNetworking;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.block.BlockState;
 import net.minecraft.command.argument.serialize.ConstantArgumentSerializer;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -300,9 +301,24 @@ public class Wathe implements ModInitializer {
         for (int x = -1; x <= 1; x += 2) {
             for (int z = -1; z <= 1; z += 2) {
                 mutable.set(playerPos.getX() + x, playerPos.getY(), playerPos.getZ() + z);
-                if (player.getWorld().isSkyVisible(mutable)) {
+                if (!hasBlockAbove(player, mutable)) {
                     return !(player.getWorld().getBlockState(playerPos).getBlock() instanceof DoorPartBlock);
                 }
+            }
+        }
+        return false;
+    }
+
+    private static boolean hasBlockAbove(@NotNull Entity entity, @NotNull BlockPos pos) {
+        BlockPos.Mutable mutable = new BlockPos.Mutable();
+        int topY = entity.getWorld().getTopY() - 1;
+        for (int y = pos.getY() + 1; y <= topY; y++) {
+            mutable.set(pos.getX(), y, pos.getZ());
+            BlockState state = entity.getWorld().getBlockState(mutable);
+            if (!state.isAir()
+                    && state.getOpacity(entity.getWorld(), mutable) > 0
+                    && !state.getCollisionShape(entity.getWorld(), mutable).isEmpty()) {
+                return true;
             }
         }
         return false;
