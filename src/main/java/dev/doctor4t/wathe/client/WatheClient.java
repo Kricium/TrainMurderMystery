@@ -93,6 +93,7 @@ public class WatheClient implements ClientModInitializer {
     // 投票界面自动打开标记：游戏结束时自动打开一次
     private static boolean hasAutoOpenedVotingScreen = false;
     private static boolean wasVotingActive = false;
+    private static MapVotingComponent.VotingStage previousVotingStage = null;
     private static boolean hasForcedOpenForUnvoted = false;
 
     // 方块黑名单 debug 开关
@@ -324,6 +325,7 @@ public class WatheClient implements ClientModInitializer {
                 MapVotingComponent.KEY.get(clientWorld.getScoreboard());
             boolean votingActive = votingComp.isVotingActive();
             boolean roulettePhase = votingActive && votingComp.isRoulettePhase();
+            MapVotingComponent.VotingStage votingStage = votingActive ? votingComp.getVotingStage() : null;
             int votingTicksRemaining = votingComp.getVotingTicksRemaining();
             boolean playerHasVoted = player != null && votingComp.getVotedMapIndex(player.getUuid()) >= 0;
 
@@ -331,6 +333,13 @@ public class WatheClient implements ClientModInitializer {
             if (votingActive && !wasVotingActive) {
                 hasAutoOpenedVotingScreen = false;
                 hasForcedOpenForUnvoted = false;
+            }
+            if (votingActive && previousVotingStage != null && previousVotingStage != votingStage) {
+                hasAutoOpenedVotingScreen = false;
+                hasForcedOpenForUnvoted = false;
+                if (mc.currentScreen instanceof MapVotingScreen) {
+                    mc.setScreen(new MapVotingScreen());
+                }
             }
             // 等待结算动画播放完毕后再自动打开一次投票界面
             if (votingActive && !hasAutoOpenedVotingScreen && !RoundTextRenderer.isEndAnimationPlaying()) {
@@ -385,6 +394,7 @@ public class WatheClient implements ClientModInitializer {
                 hasForcedOpenForUnvoted = false;
             }
             wasVotingActive = votingActive;
+            previousVotingStage = votingStage;
         });
 
         ClientTickEvents.END_CLIENT_TICK.register((client) -> {
