@@ -38,6 +38,7 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
 import net.minecraft.command.argument.serialize.ConstantArgumentSerializer;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -315,13 +316,17 @@ public class Wathe implements ModInitializer {
         for (int y = pos.getY() + 1; y <= topY; y++) {
             mutable.set(pos.getX(), y, pos.getZ());
             BlockState state = entity.getWorld().getBlockState(mutable);
-            if (!state.isAir()
-                    && state.getOpacity(entity.getWorld(), mutable) > 0
-                    && !state.getCollisionShape(entity.getWorld(), mutable).isEmpty()) {
+            if (!canPassSkyVisibility(state)) {
                 return true;
             }
         }
         return false;
+    }
+
+    private static boolean canPassSkyVisibility(@NotNull BlockState state) {
+        return state.isAir()
+                || state.isOf(Blocks.GLASS)
+                || state.isOf(WatheBlocks.STAINLESS_STEEL_WALKWAY);
     }
 
     public static boolean isExposedToWind(@NotNull Entity player) {
