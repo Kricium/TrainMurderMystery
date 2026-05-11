@@ -263,14 +263,14 @@
   "block.wathe.white_ottoman": "白色单脚矮凳",
   "block.wathe.white_trimmed_bed": "白边饰床",
 
-  "category.wathe.keybinds": "Mayoi 谋杀之谜",
+  "category.wathe.keybinds": "Parox 谋杀之谜",
 
   "commands.supporter_only": "这些特殊的赞助者指令仅限 Ko-Fi 与 YouTube 会员使用；如果你想体验一下，欢迎来赞助！<3",
 
   "container.cabinet": "柜子",
   "container.cargo_box": "货箱",
   
-  "credits.wathe.thank_you": "感谢你游玩《哈比快车-最后航程》！\n我和我的团队花了很多时间制作这个模组，希望你喜欢它。\n如果你喜欢并且想要制作视频或直播，\n请务必在视频和模组页面中标注我的频道！\n - RAT / doctor4t \n Mayoi 改版 V @mod_version@ ｜ QQ交流群: 1062983508 ",
+  "credits.wathe.thank_you": "感谢你游玩《哈比快车-最后航程》！\n我和我的团队花了很多时间制作这个模组，希望你喜欢它。\n如果你喜欢并且想要制作视频或直播，\n请务必在视频和模组页面中标注我的频道！\n - RAT / doctor4t \n Parox 改版 V @mod_version@ ｜ QQ交流群: 1062983508 ",
   "entity.wathe.firecracker": "爆竹",
   "entity.wathe.grenade": "手雷",
   "entity.wathe.note": "便条",
@@ -395,7 +395,7 @@
   "wathe.midnightconfig.instinctMode.tooltip": "选择本能透视的激活方式。\n\n按住：按住按键时激活。\n切换：按一次激活，再按一次关闭。",
   "wathe.midnightconfig.enum.InstinctModeConfig.HOLD": "按住",
   "wathe.midnightconfig.enum.InstinctModeConfig.TOGGLE": "切换",
-  "wathe.midnightconfig.title": "Mayoi 谋杀之谜 - 配置",
+  "wathe.midnightconfig.title": "Parox 谋杀之谜 - 配置",
   "wathe.midnightconfig.enum.SnowModeConfig.BOX_COLLIDER": "碰撞优化",
   "wathe.midnightconfig.enum.SnowModeConfig.NO_OPTIMIZATION": "默认",
   "wathe.midnightconfig.enum.SnowModeConfig.TURN_OFF": "无粒子",
