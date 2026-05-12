@@ -261,7 +261,7 @@
   "block.wathe.white_ottoman": "白色單腳矮凳",
   "block.wathe.white_trimmed_bed": "白邊飾床",
 
-  "category.wathe.keybinds": " SPARK 謀殺之謎",
+  "category.wathe.keybinds": "Parox 謀殺之謎",
 
   "commands.supporter_only": "這些特殊的贊助者指令僅限 Ko-Fi 與 YouTube 會員使用；如果你想體驗一下，歡迎來贊助！<3",
 
@@ -392,7 +392,7 @@
   "wathe.midnightconfig.instinctMode.tooltip": "選擇本能透視的啟動方式。\n\n按住：按住按鍵時啟動。\n切換：按一次啟動，再按一次關閉。",
   "wathe.midnightconfig.enum.InstinctModeConfig.HOLD": "按住",
   "wathe.midnightconfig.enum.InstinctModeConfig.TOGGLE": "切換",
-  "wathe.midnightconfig.title": "SPARK 謀殺之謎 - 配置",
+  "wathe.midnightconfig.title": "Parox 謀殺之謎 - 配置",
   "wathe.midnightconfig.enum.SnowModeConfig.BOX_COLLIDER": "碰撞優化",
   "wathe.midnightconfig.enum.SnowModeConfig.NO_OPTIMIZATION": "默認",
   "wathe.midnightconfig.enum.SnowModeConfig.TURN_OFF": "無粒子",
