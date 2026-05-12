@@ -149,7 +149,7 @@ public class WatheLangGen extends FabricLanguageProvider {
 
         builder.add("key.wathe.instinct", "Instinct");
         builder.add("key.wathe.map_vote", "Map Vote");
-        builder.add("category.wathe.keybinds", "Spark Murder Mystery");
+        builder.add("category.wathe.keybinds", "Parox Murder Mystery");
         builder.add("options.wathe.instinct_mode", "Instinct Mode");
         builder.add("options.wathe.instinct_mode.hold", "Hold");
         builder.add("options.wathe.instinct_mode.toggle", "Toggle");
@@ -217,7 +217,7 @@ public class WatheLangGen extends FabricLanguageProvider {
         builder.add("wathe.argument.game_mode.invalid", "Game mode could not be found");
         builder.add("wathe.argument.map_effect.invalid", "Map effect could not be found");
 
-        builder.add("credits.wathe.thank_you", "Thank you for playing The Last Voyage of the Harpy Express!\nMe and my team spent a lot of time working\non this mod and we hope you enjoy it.\nIf you do and wish to make a video or stream\nplease make sure to credit my channel,\nvideo and the mod page!\n - RAT / doctor4t \n Spark Edition V @mod_version@ | QQ Group: 1043700021 ");
+        builder.add("credits.wathe.thank_you", "Thank you for playing The Last Voyage of the Harpy Express!\nMe and my team spent a lot of time working\non this mod and we hope you enjoy it.\nIf you do and wish to make a video or stream\nplease make sure to credit my channel,\nvideo and the mod page!\n - RAT / doctor4t \n Parox Edition V @mod_version@ | QQ Group: 1043700021 ");
 
         // Faction announcements
         builder.add("announcement.result.losers", "Losers");
