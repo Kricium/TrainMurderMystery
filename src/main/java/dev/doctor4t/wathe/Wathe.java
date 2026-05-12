@@ -325,8 +325,28 @@ public class Wathe implements ModInitializer {
 
     private static boolean canPassSkyVisibility(@NotNull BlockState state) {
         return state.isAir()
-                || state.isOf(Blocks.GLASS)
+                || isVanillaGlassBlock(state)
                 || state.isOf(WatheBlocks.STAINLESS_STEEL_WALKWAY);
+    }
+
+    private static boolean isVanillaGlassBlock(@NotNull BlockState state) {
+        return state.isOf(Blocks.GLASS)
+                || state.isOf(Blocks.WHITE_STAINED_GLASS)
+                || state.isOf(Blocks.LIGHT_GRAY_STAINED_GLASS)
+                || state.isOf(Blocks.GRAY_STAINED_GLASS)
+                || state.isOf(Blocks.BLACK_STAINED_GLASS)
+                || state.isOf(Blocks.BROWN_STAINED_GLASS)
+                || state.isOf(Blocks.RED_STAINED_GLASS)
+                || state.isOf(Blocks.ORANGE_STAINED_GLASS)
+                || state.isOf(Blocks.YELLOW_STAINED_GLASS)
+                || state.isOf(Blocks.LIME_STAINED_GLASS)
+                || state.isOf(Blocks.GREEN_STAINED_GLASS)
+                || state.isOf(Blocks.CYAN_STAINED_GLASS)
+                || state.isOf(Blocks.LIGHT_BLUE_STAINED_GLASS)
+                || state.isOf(Blocks.BLUE_STAINED_GLASS)
+                || state.isOf(Blocks.PURPLE_STAINED_GLASS)
+                || state.isOf(Blocks.MAGENTA_STAINED_GLASS)
+                || state.isOf(Blocks.PINK_STAINED_GLASS);
     }
 
     public static boolean isExposedToWind(@NotNull Entity player) {
