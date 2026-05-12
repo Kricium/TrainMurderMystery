@@ -2,6 +2,9 @@ package dev.doctor4t.wathe;
 
 import com.google.common.reflect.Reflection;
 import dev.doctor4t.wathe.block.DoorPartBlock;
+import dev.doctor4t.wathe.block.GlassPanelBlock;
+import dev.doctor4t.wathe.block.PrivacyBlock;
+import dev.doctor4t.wathe.block.WalkwayBlock;
 import dev.doctor4t.wathe.cca.GameWorldComponent;
 import dev.doctor4t.wathe.cca.MapVariablesWorldComponent;
 import dev.doctor4t.wathe.cca.MapVotingComponent;
@@ -15,6 +18,7 @@ import dev.doctor4t.wathe.api.event.WatheEventHandlers;
 import dev.doctor4t.wathe.game.GameConstants;
 import dev.doctor4t.wathe.game.GameFunctions;
 import dev.doctor4t.wathe.index.*;
+import dev.doctor4t.wathe.index.tag.WatheBlockTags;
 import dev.doctor4t.wathe.network.VersionCheckConfigurationTask;
 import dev.doctor4t.wathe.network.VersionCheckPayload;
 import dev.doctor4t.wathe.record.GameRecordHooks;
@@ -36,7 +40,9 @@ import net.fabricmc.fabric.api.networking.v1.ServerConfigurationConnectionEvents
 import net.fabricmc.fabric.api.networking.v1.ServerConfigurationNetworking;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.fabricmc.fabric.api.tag.convention.v2.ConventionalBlockTags;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.block.BlockState;
 import net.minecraft.command.argument.serialize.ConstantArgumentSerializer;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -300,12 +306,43 @@ public class Wathe implements ModInitializer {
         for (int x = -1; x <= 1; x += 2) {
             for (int z = -1; z <= 1; z += 2) {
                 mutable.set(playerPos.getX() + x, playerPos.getY(), playerPos.getZ() + z);
-                if (player.getWorld().isSkyVisible(mutable)) {
+                if (player.getWorld().isSkyVisible(mutable) || hasPassableSkyPath(player, mutable)) {
                     return !(player.getWorld().getBlockState(playerPos).getBlock() instanceof DoorPartBlock);
                 }
             }
         }
         return false;
+    }
+
+    private static boolean hasPassableSkyPath(@NotNull Entity entity, @NotNull BlockPos pos) {
+        BlockPos.Mutable mutable = new BlockPos.Mutable();
+        int topY = entity.getWorld().getTopY() - 1;
+        for (int y = pos.getY(); y <= topY; y++) {
+            mutable.set(pos.getX(), y, pos.getZ());
+            BlockState state = entity.getWorld().getBlockState(mutable);
+            if (!canPassSkyVisibility(state)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean canPassSkyVisibility(@NotNull BlockState state) {
+        if (state.getBlock() instanceof PrivacyBlock
+                && state.contains(PrivacyBlock.OPAQUE)
+                && state.get(PrivacyBlock.OPAQUE)) {
+            return false;
+        }
+
+        return state.isAir()
+                || state.isIn(WatheBlockTags.WALKWAYS)
+                || state.isIn(ConventionalBlockTags.GLASS_BLOCKS)
+                || state.isIn(ConventionalBlockTags.GLASS_PANES)
+                || state.getBlock() instanceof GlassPanelBlock
+                || state.getBlock() instanceof WalkwayBlock
+                || state.isOf(WatheBlocks.HULL_GLASS)
+                || state.isOf(WatheBlocks.RHOMBUS_HULL_GLASS)
+                || state.isOf(WatheBlocks.RHOMBUS_GLASS);
     }
 
     public static boolean isExposedToWind(@NotNull Entity player) {
