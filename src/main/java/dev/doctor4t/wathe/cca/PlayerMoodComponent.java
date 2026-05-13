@@ -182,7 +182,7 @@ public class PlayerMoodComponent implements AutoSyncedComponent, ServerTickingCo
             // 任务间隔随当前任务数增加：基础间隔 + 每个任务额外增加间隔
             int baseInterval = (int) (this.player.getRandom().nextFloat() * (GameConstants.MAX_TASK_COOLDOWN - GameConstants.MIN_TASK_COOLDOWN) + GameConstants.MIN_TASK_COOLDOWN);
             int extraInterval = this.tasks.size() * GameConstants.TASK_INTERVAL_PER_ACTIVE_TASK;
-            this.nextTaskTimer = Math.max(baseInterval + extraInterval, 2);
+            this.nextTaskTimer = Math.max(applyKillerCountTaskIntervalMultiplier(gameWorldComponent, baseInterval + extraInterval), 2);
         }
         ArrayList<Task> removals = new ArrayList<>();
         for (TrainTask task : this.tasks.values()) {
@@ -205,6 +205,14 @@ public class PlayerMoodComponent implements AutoSyncedComponent, ServerTickingCo
             this.sync();
             this.dirty = false;
         }
+    }
+
+    private int applyKillerCountTaskIntervalMultiplier(GameWorldComponent gameWorldComponent, int interval) {
+        return switch (gameWorldComponent.getInitialKillerCount()) {
+            case 1 -> interval / 2;
+            case 2 -> interval * 3 / 4;
+            default -> interval;
+        };
     }
 
     private @Nullable TrainTask generateTask() {

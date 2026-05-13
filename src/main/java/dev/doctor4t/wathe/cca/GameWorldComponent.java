@@ -114,6 +114,7 @@ public class GameWorldComponent implements AutoSyncedComponent, ServerTickingCom
     private int killerDividend = 6;
     private int vigilanteDividend = 6;
     private int neutralDividend = 6;
+    private int initialKillerCount = 0;
 
     // Disabled roles (persisted)
     private final HashSet<Identifier> disabledRoles = new HashSet<>();
@@ -262,6 +263,7 @@ public class GameWorldComponent implements AutoSyncedComponent, ServerTickingCom
         this.gameProfiles.clear();
         this.deadPlayers.clear();
         this.rooms.clear();
+        this.initialKillerCount = 0;
         setPsychosActive(0);
     }
 
@@ -503,6 +505,15 @@ public class GameWorldComponent implements AutoSyncedComponent, ServerTickingCom
         this.sync();
     }
 
+    public int getInitialKillerCount() {
+        return initialKillerCount;
+    }
+
+    public void setInitialKillerCount(int initialKillerCount) {
+        this.initialKillerCount = Math.max(0, initialKillerCount);
+        this.sync();
+    }
+
     public int getVigilanteDividend() {
         return vigilanteDividend;
     }
@@ -554,6 +565,7 @@ public class GameWorldComponent implements AutoSyncedComponent, ServerTickingCom
         this.killerDividend = nbtCompound.getInt("KillerDividend") > 0 ? nbtCompound.getInt("KillerDividend") : 6;
         this.vigilanteDividend = nbtCompound.getInt("VigilanteDividend") > 0 ? nbtCompound.getInt("VigilanteDividend") : 6;
         this.neutralDividend = nbtCompound.getInt("NeutralDividend") > 0 ? nbtCompound.getInt("NeutralDividend") : 6;
+        this.initialKillerCount = Math.max(0, nbtCompound.getInt("InitialKillerCount"));
 
         // 渐进式重置开关（默认 true）
         if (nbtCompound.contains("GradualResetEnabled")) {
@@ -654,6 +666,7 @@ public class GameWorldComponent implements AutoSyncedComponent, ServerTickingCom
         nbtCompound.putInt("KillerDividend", killerDividend);
         nbtCompound.putInt("VigilanteDividend", vigilanteDividend);
         nbtCompound.putInt("NeutralDividend", neutralDividend);
+        nbtCompound.putInt("InitialKillerCount", initialKillerCount);
 
         // 渐进式重置开关
         nbtCompound.putBoolean("GradualResetEnabled", gradualResetEnabled);

@@ -47,6 +47,7 @@ public class MurderGameMode extends GameMode {
     @Override
     public void initializeGame(ServerWorld serverWorld, GameWorldComponent gameWorldComponent, List<ServerPlayerEntity> players) {
         int killerCount = assignRolesAndGetKillerCount(serverWorld, players, gameWorldComponent);
+        gameWorldComponent.setInitialKillerCount(killerCount);
 
         for (ServerPlayerEntity player : players) {
             Role role = gameWorldComponent.getRole(player);
