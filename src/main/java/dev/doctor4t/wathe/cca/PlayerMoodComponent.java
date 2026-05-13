@@ -102,6 +102,10 @@ public class PlayerMoodComponent implements AutoSyncedComponent, ServerTickingCo
         this.dirty = false;
     }
 
+    public void adjustInitialTaskTimer(GameWorldComponent gameWorldComponent) {
+        this.nextTaskTimer = Math.max(applyKillerCountTaskIntervalMultiplier(gameWorldComponent, this.nextTaskTimer), 2);
+    }
+
     private List<Item> getPsychosisItemPool() {
         if (cachedPsychosisItems == null) {
             cachedPsychosisItems = this.player.getRegistryManager()
